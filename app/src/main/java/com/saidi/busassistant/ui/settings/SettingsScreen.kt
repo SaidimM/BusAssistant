@@ -13,9 +13,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.saidi.busassistant.R
 import com.saidi.busassistant.ui.theme.*
 import com.saidi.busassistant.ui.viewmodel.HomeViewModel
 
@@ -39,12 +42,12 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("设置") },
+                title = { Text(stringResource(R.string.settings)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "返回"
+                            contentDescription = stringResource(R.string.back)
                         )
                     }
                 },
@@ -61,44 +64,44 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 数据与隐私
-            SettingsSection(title = "数据与隐私") {
-                // 位置权限
+            // Data & Privacy
+            SettingsSection(title = stringResource(R.string.data_and_privacy)) {
+                // Location
                 SettingsSwitchItem(
                     icon = Icons.Default.LocationOn,
-                    title = "使用位置信息",
-                    subtitle = "识别通勤方向，自动展示对应线路",
-                    checked = true, // TODO: 从 DataStore 读取
+                    title = stringResource(R.string.use_location),
+                    subtitle = stringResource(R.string.use_location_subtitle),
+                    checked = true, // TODO: read from DataStore
                     onCheckedChange = { /* TODO */ }
                 )
 
-                // 习惯记录
+                // Habit recording
                 SettingsSwitchItem(
                     icon = Icons.Default.BarChart,
-                    title = "记录使用习惯",
-                    subtitle = "用于智能推荐常坐线路",
-                    checked = true, // TODO: 从 DataStore 读取
+                    title = stringResource(R.string.record_usage_habits),
+                    subtitle = stringResource(R.string.record_usage_habits_subtitle),
+                    checked = true, // TODO: read from DataStore
                     onCheckedChange = { /* TODO */ }
                 )
             }
 
-            // 数据管理
-            SettingsSection(title = "数据管理") {
+            // Data Management
+            SettingsSection(title = stringResource(R.string.data_management)) {
                 SettingsClickableItem(
                     icon = Icons.Default.Delete,
-                    title = "清除所有学习数据",
-                    subtitle = "删除记录的使用习惯和偏好设置",
+                    title = stringResource(R.string.clear_learning_data),
+                    subtitle = stringResource(R.string.clear_learning_data_subtitle),
                     iconTint = RedAlert,
                     onClick = { showClearConfirm = true }
                 )
             }
 
-            // 关于
-            SettingsSection(title = "关于") {
+            // About
+            SettingsSection(title = stringResource(R.string.about)) {
                 SettingsInfoItem(
                     icon = Icons.Default.Info,
-                    title = "数据说明",
-                    subtitle = "所有数据仅存储在您的手机本地，不会上传任何服务器。\n\n实时公交数据来自北京公交官方接口。"
+                    title = stringResource(R.string.data_note),
+                    subtitle = stringResource(R.string.data_note_subtitle)
                 )
 
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
@@ -111,7 +114,7 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "版本",
+                        text = stringResource(R.string.version),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
@@ -124,9 +127,9 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            // 底部提示
+            // Footer
             Text(
-                text = "BusAssistant MVP\n所有数据本地存储，保护您的隐私",
+                text = stringResource(R.string.footer_text),
                 style = MaterialTheme.typography.labelSmall,
                 color = GrayText.copy(alpha = 0.7f),
                 modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -138,9 +141,9 @@ fun SettingsScreen(
     if (showClearConfirm) {
         AlertDialog(
             onDismissRequest = { showClearConfirm = false },
-            title = { Text("清除学习数据") },
+            title = { Text(stringResource(R.string.clear_data_title)) },
             text = {
-                Text("确定要删除所有使用习惯数据吗？\n这将重置智能推荐功能。")
+                Text(stringResource(R.string.clear_data_message))
             },
             confirmButton = {
                 TextButton(
@@ -149,12 +152,12 @@ fun SettingsScreen(
                         showClearConfirm = false
                     }
                 ) {
-                    Text("清除", color = RedAlert)
+                    Text(stringResource(R.string.clear), color = RedAlert)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showClearConfirm = false }) {
-                    Text("取消")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )

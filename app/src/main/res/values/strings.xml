@@ -1,27 +1,76 @@
 <resources>
     <string name="app_name">BusAssistant</string>
-    <string name="home_title">我的公交</string>
-    <string name="add_line">添加线路</string>
-    <string name="settings">设置</string>
-    <string name="no_lines_added">还没有添加线路\n点击 + 添加你常坐的公交</string>
-    <string name="refresh">刷新</string>
-    <string name="arriving_soon">即将到站</string>
-    <string name="minutes">分钟</string>
-    <string name="add_line_title">添加公交线路</string>
-    <string name="line_number">线路号</string>
-    <string name="search_line">搜索线路</string>
-    <string name="select_direction">选择方向</string>
-    <string name="select_station">选择你的上车站点</string>
-    <string name="save">保存</string>
-    <string name="cancel">取消</string>
-    <string name="delete">删除</string>
-    <string name="label_work">上班</string>
-    <string name="label_home">回家</string>
-    <string name="label_school">上学</string>
-    <string name="label_shopping">购物</string>
-    <string name="label_hospital">就医</string>
-    <string name="label_custom">自定义</string>
-    <string name="data_cached">数据可能滞后</string>
-    <string name="pull_to_refresh">下拉刷新</string>
-    <string name="bus_position_format">%1$d站 · %2$s</string>
+
+    <!-- Home -->
+    <string name="home_title">My Buses</string>
+    <string name="refresh">Refresh</string>
+    <string name="settings">Settings</string>
+    <string name="add_line">Add line</string>
+    <string name="lines_added_count">%1$d lines added</string>
+    <string name="empty_state_title">No lines added yet</string>
+    <string name="empty_state_subtitle">Add the bus lines you take often.\nOpen the app to see real-time arrivals.</string>
+    <string name="add_first_line">Add your first line</string>
+
+    <!-- Bus line card -->
+    <string name="boarding_station">Boarding stop: %1$s</string>
+    <string name="stops_away">%1$d stops away</string>
+    <string name="about_minutes">~ %1$d min</string>
+    <string name="arriving_soon">Arriving soon</string>
+    <string name="add_label">Add label</string>
+    <string name="delete">Delete</string>
+    <string name="delete_line_title">Delete line</string>
+    <string name="delete_line_message">Delete %1$s?</string>
+    <string name="label_dialog_title">Label this line</string>
+    <string name="clear_label">Clear label</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- Labels -->
+    <string name="label_work">Work</string>
+    <string name="label_home">Home</string>
+    <string name="label_school">School</string>
+    <string name="label_shopping">Shopping</string>
+    <string name="label_hospital">Medical</string>
+    <string name="label_custom">Custom</string>
+
+    <!-- Progress / status -->
+    <string name="no_real_time_data">No real-time data</string>
+    <string name="within_one_minute">Within 1 minute</string>
+    <string name="minutes">%1$d min</string>
+    <string name="data_cached">Data may be stale</string>
+    <string name="pull_to_refresh">Pull to refresh</string>
+
+    <!-- Add line flow -->
+    <string name="add_line_title">Add bus line</string>
+    <string name="back">Back</string>
+    <string name="search_placeholder">Enter line number, e.g. 375, 601</string>
+    <string name="search">Search</string>
+    <string name="search_results">Search results (%1$d)</string>
+    <string name="no_results">No lines found, try another keyword</string>
+    <string name="select_boarding_station">Select your boarding stop</string>
+    <string name="search_again">Search again</string>
+    <string name="confirm_add">Confirm add</string>
+    <string name="go_back">Go back</string>
+    <string name="line">Line</string>
+    <string name="direction">Direction</string>
+    <string name="start">Start</string>
+    <string name="end">End</string>
+    <string name="boarding_stop">Boarding stop</string>
+
+    <!-- Settings -->
+    <string name="data_and_privacy">Data &amp; Privacy</string>
+    <string name="use_location">Use location</string>
+    <string name="use_location_subtitle">Detect commute direction and show matching lines</string>
+    <string name="record_usage_habits">Record usage habits</string>
+    <string name="record_usage_habits_subtitle">Used to smartly recommend frequent lines</string>
+    <string name="data_management">Data Management</string>
+    <string name="clear_learning_data">Clear all learning data</string>
+    <string name="clear_learning_data_subtitle">Delete recorded usage habits and preferences</string>
+    <string name="about">About</string>
+    <string name="data_note">Data note</string>
+    <string name="data_note_subtitle">All data is stored only on your device. No data is uploaded to any server.\n\nReal-time bus data comes from the official Beijing bus API.</string>
+    <string name="version">Version</string>
+    <string name="footer_text">BusAssistant MVP\nAll data stored locally. Your privacy is protected.</string>
+    <string name="clear_data_title">Clear learning data</string>
+    <string name="clear_data_message">Delete all usage habit data?\nThis will reset smart recommendations.</string>
+    <string name="clear">Clear</string>
 </resources>

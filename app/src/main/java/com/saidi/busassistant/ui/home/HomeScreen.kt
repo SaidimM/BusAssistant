@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
@@ -20,8 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.saidi.busassistant.R
 import com.saidi.busassistant.data.local.entity.BusLineEntity
 import com.saidi.busassistant.ui.components.BusLineCard
 import com.saidi.busassistant.ui.components.LabelSelectionDialog
@@ -58,7 +61,7 @@ fun HomeScreen(
                 title = {
                     Column {
                         Text(
-                            text = "我的公交",
+                            text = stringResource(R.string.home_title),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
@@ -73,14 +76,14 @@ fun HomeScreen(
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "刷新",
+                            contentDescription = stringResource(R.string.refresh),
                             tint = BluePrimary
                         )
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Default.Settings,
-                            contentDescription = "设置",
+                            contentDescription = stringResource(R.string.settings),
                             tint = GrayText
                         )
                     }
@@ -98,7 +101,7 @@ fun HomeScreen(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "添加线路",
+                    contentDescription = stringResource(R.string.add_line),
                     tint = MaterialTheme.colorScheme.onPrimary
                 )
             }
@@ -123,7 +126,7 @@ fun HomeScreen(
                     // 智能提示（如果有学习数据）
                     item {
                         Text(
-                            text = "已添加 ${uiState.lines.size} 条线路",
+                            text = stringResource(R.string.lines_added_count, uiState.lines.size),
                             style = MaterialTheme.typography.labelMedium,
                             color = GrayText,
                             modifier = Modifier.padding(bottom = 4.dp)
@@ -201,7 +204,7 @@ private fun EmptyState(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = androidx.compose.material.icons.Icons.Default.DirectionsBus,
+                imageVector = Icons.Filled.DirectionsBus,
                 contentDescription = null,
                 modifier = Modifier.size(40.dp),
                 tint = BluePrimary.copy(alpha = 0.5f)
@@ -211,7 +214,7 @@ private fun EmptyState(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "还没有添加线路",
+            text = stringResource(R.string.empty_state_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
@@ -220,7 +223,7 @@ private fun EmptyState(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "添加你常坐的公交线路\n打开 App 即可看到实时到站信息",
+            text = stringResource(R.string.empty_state_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = GrayText,
             textAlign = TextAlign.Center
@@ -241,7 +244,7 @@ private fun EmptyState(
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text("添加第一条线路")
+            Text(stringResource(R.string.add_first_line))
         }
     }
 }
@@ -250,6 +253,6 @@ private fun EmptyState(
  * 获取当前时间文本
  */
 private fun getCurrentTimeText(): String {
-    val sdf = SimpleDateFormat("MM月dd日 EEEE HH:mm", Locale.CHINA)
+    val sdf = SimpleDateFormat("MMM dd, EEEE HH:mm", Locale.getDefault())
     return sdf.format(Date())
 }

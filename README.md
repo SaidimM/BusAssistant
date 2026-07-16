@@ -1,37 +1,37 @@
-# BusAssistant — 智能通勤助手 (Android MVP)
+# BusAssistant — Smart Commute Assistant (Android MVP)
 
-> 打开 App 直接看到你常坐的几班车现在到哪了。无地图、零交互、纯本地。
+> Open the app and instantly see where your frequently used buses are. No map, zero interaction, fully local.
 
-## 核心特性
+## Core Features
 
-| 特性 | 说明 |
-|------|------|
-| **零交互看板** | 打开 App 3 秒内展示收藏线路的实时车辆位置和到站时间 |
-| **无地图 SDK** | 纯进度条可视化，APK < 20MB，启动 < 2 秒 |
-| **纯本地存储** | 所有数据存在手机本地，不上传任何服务器 |
-| **习惯学习** | 自动记录查看行为，高频线路智能置顶（P1） |
-| **用户标注** | 为线路打标签（上班/回家等），增强个性化 |
+| Feature | Description |
+|---|---|
+| **Zero-interaction dashboard** | Open the app and within 3 seconds see real-time vehicle positions and arrival times for your favorite lines |
+| **No map SDK** | Pure progress-bar visualization, APK < 20MB, cold start < 2 seconds |
+| **Fully local storage** | All data stays on the device; nothing is uploaded |
+| **Habit learning** | Automatically records viewing behavior and pins high-frequency lines to the top (P1) |
+| **User labels** | Tag lines (Work / Home / School, etc.) for stronger personalization |
 
-## 技术栈
+## Tech Stack
 
 - **Kotlin** + **Jetpack Compose**
-- **Hilt** 依赖注入
-- **Room** 本地数据库
-- **Retrofit** 网络请求（预留）
-- **Coroutines + Flow** 异步编程
-- **Mock 数据** 开发阶段内置模拟公交数据
+- **Hilt** dependency injection
+- **Room** local database
+- **Retrofit** network requests (reserved)
+- **Coroutines + Flow** async programming
+- **Mock data** built-in simulated bus data for development
 
-## 项目结构
+## Project Structure
 
 ```
 com.saidi.busassistant/
-├── MainActivity.kt              # 入口 + Navigation
+├── MainActivity.kt              # Entry point + Navigation
 ├── BusAssistantApp.kt           # Application (Hilt)
 ├── data/
-│   ├── local/                   # Room 数据库
+│   ├── local/                   # Room database
 │   │   ├── entity/
-│   │   │   ├── BusLineEntity.kt         # 收藏线路
-│   │   │   └── BehaviorLogEntity.kt     # 行为日志
+│   │   │   ├── BusLineEntity.kt         # Favorite lines
+│   │   │   └── BehaviorLogEntity.kt     # Behavior logs
 │   │   ├── AppDatabase.kt
 │   │   ├── BusLineDao.kt
 │   │   └── BehaviorLogDao.kt
@@ -40,41 +40,41 @@ com.saidi.busassistant/
 │   │   └── dto/
 │   │       └── BusRealTimeDto.kt
 │   └── repository/
-│       └── BusRepository.kt     # 数据整合 + Mock
+│       └── BusRepository.kt     # Data integration + Mock
 ├── di/
-│   └── AppModule.kt             # Hilt 模块
+│   └── AppModule.kt             # Hilt module
 ├── ui/
 │   ├── home/
-│   │   └── HomeScreen.kt        # 首页实时看板
+│   │   └── HomeScreen.kt        # Home real-time dashboard
 │   ├── addline/
-│   │   └── AddLineScreen.kt     # 添加线路流程
+│   │   └── AddLineScreen.kt     # Add-line flow
 │   ├── settings/
-│   │   └── SettingsScreen.kt    # 设置页
+│   │   └── SettingsScreen.kt    # Settings screen
 │   ├── components/
-│   │   ├── BusLineCard.kt       # 线路卡片
-│   │   └── ProgressIndicator.kt # 进度条组件
+│   │   ├── BusLineCard.kt       # Line card
+│   │   └── ProgressIndicator.kt # Progress bar component
 │   ├── viewmodel/
-│   │   └── HomeViewModel.kt     # 首页逻辑
+│   │   └── HomeViewModel.kt     # Home logic
 │   └── theme/
 │       ├── Color.kt
 │       ├── Theme.kt
 │       └── Type.kt
 └── util/
-    └── BusLabel.kt              # 标签工具 (预留)
+    └── BusLabel.kt              # Label utilities (reserved)
 ```
 
-## 开发阶段说明
+## Development Status
 
-### 当前状态：MVP（Mock 数据）
+### Current: MVP (Mock Data)
 
-当前版本使用 **Mock 数据**模拟北京公交线路，无需真实 API 即可运行和体验交互流程。
+The current version uses **mock data** to simulate Beijing bus lines, so the app can run and demonstrate the interaction flow without a real API.
 
-### 切换到真实 API
+### Switching to a Real API
 
-修改 `BusRepository.kt` 中的 `getRealTimeData` 方法：
+Modify the `getRealTimeData` method in `BusRepository.kt`:
 
 ```kotlin
-// 取消 Mock 数据注释，启用真实 API 调用：
+// Uncomment the real API call and remove mock data:
 val response = busApi.getRealTimeData(lineId, direction)
 if (response.isSuccessful && response.body()?.status == 200) {
     val data = response.body()?.data
@@ -86,57 +86,57 @@ if (response.isSuccessful && response.body()?.status == 200) {
 }
 ```
 
-同时修改 `BeijingBusApi.BASE_URL` 为实际的北京公交 API 地址。
+Also update `BeijingBusApi.BASE_URL` to the actual Beijing bus API endpoint.
 
-## 构建和运行
+## Build & Run
 
-### 环境要求
-- Android Studio Hedgehog (2023.1.1) 或更新版本
+### Requirements
+- Android Studio Hedgehog (2023.1.1) or newer
 - JDK 17
 - Android SDK 34
 
-### 构建步骤
+### Steps
 
-1. 用 Android Studio 打开项目
-2. 同步 Gradle（Sync Project with Gradle Files）
-3. 连接设备或启动模拟器（API 26+）
-4. 点击 Run
+1. Open the project in Android Studio.
+2. Sync Gradle.
+3. Connect a device or start an emulator (API 26+).
+4. Click Run.
 
-### 命令行构建
+### Command Line
 
 ```bash
 ./gradlew assembleDebug
 ```
 
-APK 输出路径：`app/build/outputs/apk/debug/app-debug.apk`
+APK output: `app/build/outputs/apk/debug/app-debug.apk`
 
-## 功能清单
+## Feature Checklist
 
-### P0 — MVP 核心（已完成）
-- [x] 手动添加公交线路
-- [x] 实时看板（首页）
-- [x] 实时数据网关（含 Mock）
-- [x] 本地数据存储（Room）
+### P0 — MVP Core (completed)
+- [x] Manually add bus lines
+- [x] Real-time dashboard (home)
+- [x] Real-time data gateway (with mock)
+- [x] Local data storage (Room)
 
-### P1 — 智能层（框架已搭，待接入）
-- [x] 用户路线标注
-- [x] 行为自动记录
-- [ ] 地理围栏区域判断（需位置权限）
-- [x] 智能排序算法
-- [x] 设置页
+### P1 — Intelligence Layer (framework ready, pending integration)
+- [x] User line labels
+- [x] Automatic behavior logging
+- [ ] Geofence-based zone detection (requires location permission)
+- [x] Smart sorting algorithm
+- [x] Settings screen
 
-### P2 — 体验优化（后续迭代）
-- [ ] 锁屏/桌面小组件
-- [ ] 到站提醒通知
-- [ ] 历史统计页
+### P2 — Experience Improvements (future iterations)
+- [ ] Lock screen / home screen widgets
+- [ ] Arrival reminder notifications
+- [ ] History statistics screen
 
-## 隐私说明
+## Privacy
 
-- **所有数据仅存储在设备本地**，使用 Room 数据库
-- **不上传任何数据到服务器**
-- 位置信息仅用于判断通勤方向，不在后台持续采集
-- 用户可随时在设置中清除所有学习数据或关闭习惯记录
+- **All data is stored locally on the device** using Room.
+- **No data is uploaded to any server.**
+- Location is used only to determine commute direction and is not collected continuously in the background.
+- Users can clear all learning data or disable habit recording at any time in Settings.
 
 ## License
 
-MIT License — 自由使用和修改。
+MIT License — free to use and modify.

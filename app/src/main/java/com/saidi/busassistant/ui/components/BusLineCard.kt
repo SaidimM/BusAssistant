@@ -22,8 +22,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.saidi.busassistant.R
 import com.saidi.busassistant.data.local.entity.BusLineEntity
 import com.saidi.busassistant.ui.theme.*
 import com.saidi.busassistant.ui.viewmodel.ClosestBusInfo
@@ -118,7 +120,7 @@ fun BusLineCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Star,
-                                contentDescription = "添加标签",
+                                contentDescription = stringResource(R.string.add_label),
                                 tint = GrayText.copy(alpha = 0.5f),
                                 modifier = Modifier.size(18.dp)
                             )
@@ -132,7 +134,7 @@ fun BusLineCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Delete,
-                            contentDescription = "删除",
+                            contentDescription = stringResource(R.string.delete),
                             tint = GrayText.copy(alpha = 0.5f),
                             modifier = Modifier.size(18.dp)
                         )
@@ -144,7 +146,7 @@ fun BusLineCard(
 
             // 站点信息
             Text(
-                text = "上车站: ${line.userBoardingStation}",
+                text = stringResource(R.string.boarding_station, line.userBoardingStation),
                 style = MaterialTheme.typography.labelMedium,
                 color = GrayText
             )
@@ -166,9 +168,10 @@ fun BusLineCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val detailText = buildString {
-                        append("还有 ${bus.stationsAway} 站")
+                        append(stringResource(R.string.stops_away, bus.stationsAway))
                         if (bus.minutesAway > 0) {
-                            append(" · 约 ${bus.minutesAway} 分钟")
+                            append(" · ")
+                            append(stringResource(R.string.about_minutes, bus.minutesAway))
                         }
                     }
                     Text(
@@ -183,7 +186,7 @@ fun BusLineCard(
                             color = GreenSuccess.copy(alpha = 0.1f)
                         ) {
                             Text(
-                                text = "即将到站",
+                                text = stringResource(R.string.arriving_soon),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = GreenSuccess,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
@@ -199,8 +202,8 @@ fun BusLineCard(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("删除线路") },
-            text = { Text("确定要删除 ${line.lineName} 吗？") },
+            title = { Text(stringResource(R.string.delete_line_title)) },
+            text = { Text(stringResource(R.string.delete_line_message, line.lineName)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -208,12 +211,12 @@ fun BusLineCard(
                         showDeleteConfirm = false
                     }
                 ) {
-                    Text("删除", color = RedAlert)
+                    Text(stringResource(R.string.delete), color = RedAlert)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("取消")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -228,13 +231,13 @@ fun UserLabelChip(
     label: String,
     onClick: () -> Unit
 ) {
-    val (icon, color) = when (label) {
-        "上班" -> Icons.Default.Work to BluePrimary
-        "回家" -> Icons.Default.Home to TealAccent
-        "上学" -> Icons.Default.School to OrangeWarning
-        "购物" -> Icons.Default.ShoppingCart to Color(0xFF8B5CF6)
-        "就医" -> Icons.Default.LocalHospital to RedAlert
-        else -> Icons.Default.Star to GrayText
+    val (icon, color, labelText) = when (label) {
+        "work" -> Triple(Icons.Default.Work, BluePrimary, R.string.label_work)
+        "home" -> Triple(Icons.Default.Home, TealAccent, R.string.label_home)
+        "school" -> Triple(Icons.Default.School, OrangeWarning, R.string.label_school)
+        "shopping" -> Triple(Icons.Default.ShoppingCart, Color(0xFF8B5CF6), R.string.label_shopping)
+        "hospital" -> Triple(Icons.Default.LocalHospital, RedAlert, R.string.label_hospital)
+        else -> Triple(Icons.Default.Star, GrayText, R.string.label_custom)
     }
 
     Surface(
@@ -254,7 +257,7 @@ fun UserLabelChip(
                 modifier = Modifier.size(14.dp)
             )
             Text(
-                text = label,
+                text = stringResource(labelText),
                 style = MaterialTheme.typography.labelSmall,
                 color = color
             )
@@ -272,26 +275,26 @@ fun LabelSelectionDialog(
     onLabelSelected: (String?) -> Unit
 ) {
     val labels = listOf(
-        "上班" to Icons.Default.Work,
-        "回家" to Icons.Default.Home,
-        "上学" to Icons.Default.School,
-        "购物" to Icons.Default.ShoppingCart,
-        "就医" to Icons.Default.LocalHospital
+        Triple("work", Icons.Default.Work, R.string.label_work),
+        Triple("home", Icons.Default.Home, R.string.label_home),
+        Triple("school", Icons.Default.School, R.string.label_school),
+        Triple("shopping", Icons.Default.ShoppingCart, R.string.label_shopping),
+        Triple("hospital", Icons.Default.LocalHospital, R.string.label_hospital)
     )
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("标注这条线路") },
+        title = { Text(stringResource(R.string.label_dialog_title)) },
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                labels.forEach { (label, icon) ->
-                    val isSelected = currentLabel == label
+                labels.forEach { (key, icon, labelRes) ->
+                    val isSelected = currentLabel == key
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onLabelSelected(label) },
+                            .clickable { onLabelSelected(key) },
                         shape = RoundedCornerShape(12.dp),
                         color = if (isSelected)
                             BluePrimary.copy(alpha = 0.1f)
@@ -305,11 +308,11 @@ fun LabelSelectionDialog(
                         ) {
                             Icon(
                                 imageVector = icon,
-                                contentDescription = label,
+                                contentDescription = stringResource(labelRes),
                                 tint = if (isSelected) BluePrimary else GrayText
                             )
                             Text(
-                                text = label,
+                                text = stringResource(labelRes),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = if (isSelected) BluePrimary else MaterialTheme.colorScheme.onSurface
                             )
@@ -324,7 +327,7 @@ fun LabelSelectionDialog(
                         onClick = { onLabelSelected(null) },
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     ) {
-                        Text("清除标签", color = RedAlert)
+                        Text(stringResource(R.string.clear_label), color = RedAlert)
                     }
                 }
             }
@@ -332,7 +335,7 @@ fun LabelSelectionDialog(
         confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消")
+                Text(stringResource(R.string.cancel))
             }
         }
     )

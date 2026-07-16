@@ -19,10 +19,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.saidi.busassistant.R
 import com.saidi.busassistant.data.local.entity.BusLineEntity
 import com.saidi.busassistant.data.remote.dto.LineSearchResult
 import com.saidi.busassistant.data.remote.dto.StationResult
@@ -50,12 +52,12 @@ fun AddLineScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("添加公交线路") },
+                title = { Text(stringResource(R.string.add_line_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "返回"
+                            contentDescription = stringResource(R.string.back)
                         )
                     }
                 },
@@ -126,7 +128,7 @@ private fun SearchStep(
             value = keyword,
             onValueChange = onKeywordChange,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("输入线路号，如 375、601、特8") },
+            placeholder = { Text(stringResource(R.string.search_placeholder)) },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Search,
@@ -171,7 +173,7 @@ private fun SearchStep(
                     strokeWidth = 2.dp
                 )
             } else {
-                Text("搜索")
+                Text(stringResource(R.string.search))
             }
         }
 
@@ -180,7 +182,7 @@ private fun SearchStep(
         // 搜索结果
         if (results.isNotEmpty()) {
             Text(
-                text = "搜索结果 (${results.size})",
+                text = stringResource(R.string.search_results, results.size),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(bottom = 8.dp)
@@ -205,7 +207,7 @@ private fun SearchStep(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "未找到线路，请尝试其他关键词",
+                    text = stringResource(R.string.no_results),
                     style = MaterialTheme.typography.bodyMedium,
                     color = GrayText
                 )
@@ -312,7 +314,7 @@ private fun StationSelectStep(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "选择你的上车站点",
+            text = stringResource(R.string.select_boarding_station),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(bottom = 12.dp)
@@ -336,7 +338,7 @@ private fun StationSelectStep(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text("重新搜索")
+            Text(stringResource(R.string.search_again))
         }
     }
 }
@@ -399,7 +401,7 @@ private fun ConfirmStep(
     ) {
         Column {
             Text(
-                text = "确认添加",
+                text = stringResource(R.string.confirm_add),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -419,12 +421,12 @@ private fun ConfirmStep(
                         .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    InfoRow(label = "线路", value = line.lineName)
-                    InfoRow(label = "方向", value = line.direction)
-                    InfoRow(label = "起点", value = line.startStation)
-                    InfoRow(label = "终点", value = line.endStation)
+                    InfoRow(label = stringResource(R.string.line), value = line.lineName)
+                    InfoRow(label = stringResource(R.string.direction), value = line.direction)
+                    InfoRow(label = stringResource(R.string.start), value = line.startStation)
+                    InfoRow(label = stringResource(R.string.end), value = line.endStation)
                     InfoRow(
-                        label = "上车站",
+                        label = stringResource(R.string.boarding_stop),
                         value = line.userBoardingStation,
                         isHighlight = true
                     )
@@ -442,7 +444,7 @@ private fun ConfirmStep(
                     containerColor = BluePrimary
                 )
             ) {
-                Text("确认添加")
+                Text(stringResource(R.string.confirm_add))
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -452,7 +454,7 @@ private fun ConfirmStep(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("返回修改")
+                Text(stringResource(R.string.go_back))
             }
         }
     }

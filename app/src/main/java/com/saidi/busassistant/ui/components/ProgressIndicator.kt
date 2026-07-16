@@ -15,6 +15,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.res.stringResource
+import com.saidi.busassistant.R
 import com.saidi.busassistant.ui.theme.*
 import com.saidi.busassistant.ui.viewmodel.ClosestBusInfo
 
@@ -39,7 +41,7 @@ fun BusProgressBar(
             contentAlignment = Alignment.CenterStart
         ) {
             Text(
-                text = "暂无实时数据",
+                text = stringResource(R.string.no_real_time_data),
                 style = MaterialTheme.typography.labelMedium,
                 color = GrayText
             )
@@ -154,9 +156,9 @@ fun BusProgressBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             val timeText = when {
-                closestBus.isArriving -> "即将到站"
-                closestBus.minutesAway <= 1 -> "1分钟内"
-                else -> "${closestBus.minutesAway}分钟"
+                closestBus.isArriving -> stringResource(R.string.arriving_soon)
+                closestBus.minutesAway <= 1 -> stringResource(R.string.within_one_minute)
+                else -> stringResource(R.string.minutes, closestBus.minutesAway)
             }
             Text(
                 text = timeText,
