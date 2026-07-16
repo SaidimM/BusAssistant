@@ -1,0 +1,27 @@
+<resources>
+    <string name="app_name">BusAssistant</string>
+    <string name="home_title">我的公交</string>
+    <string name="add_line">添加线路</string>
+    <string name="settings">设置</string>
+    <string name="no_lines_added">还没有添加线路\n点击 + 添加你常坐的公交</string>
+    <string name="refresh">刷新</string>
+    <string name="arriving_soon">即将到站</string>
+    <string name="minutes">分钟</string>
+    <string name="add_line_title">添加公交线路</string>
+    <string name="line_number">线路号</string>
+    <string name="search_line">搜索线路</string>
+    <string name="select_direction">选择方向</string>
+    <string name="select_station">选择你的上车站点</string>
+    <string name="save">保存</string>
+    <string name="cancel">取消</string>
+    <string name="delete">删除</string>
+    <string name="label_work">上班</string>
+    <string name="label_home">回家</string>
+    <string name="label_school">上学</string>
+    <string name="label_shopping">购物</string>
+    <string name="label_hospital">就医</string>
+    <string name="label_custom">自定义</string>
+    <string name="data_cached">数据可能滞后</string>
+    <string name="pull_to_refresh">下拉刷新</string>
+    <string name="bus_position_format">%1$d站 · %2$s</string>
+</resources>
