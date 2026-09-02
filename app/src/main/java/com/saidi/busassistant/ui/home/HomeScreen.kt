@@ -27,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.saidi.busassistant.R
 import com.saidi.busassistant.data.local.entity.BusLineEntity
 import com.saidi.busassistant.ui.components.BusLineCard
+import com.saidi.busassistant.ui.components.CommuteCorridorCard
 import com.saidi.busassistant.ui.components.LabelSelectionDialog
 import com.saidi.busassistant.ui.theme.BluePrimary
 import com.saidi.busassistant.ui.theme.GrayText
@@ -35,7 +36,7 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * 首页 —— 实时公交看板
+ * 首页 —— 实时公交看板（支持通勤走廊多线极速聚合）
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
@@ -45,6 +46,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val corridorState by viewModel.corridorState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val realTimeDataMap by viewModel.realTimeDataMap.collectAsState()
 
@@ -113,26 +115,57 @@ fun HomeScreen(
                 .padding(paddingValues)
                 .pullRefresh(pullRefreshState)
         ) {
-            if (uiState.lines.isEmpty()) {
+            if (uiState.lines.isEmpty() && corridorState.isEmpty) {
                 // 空状态
                 EmptyState(onAddLineClick = onAddLineClick)
             } else {
-                // 线路列表
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // 智能提示（如果有学习数据）
-                    item {
-                        Text(
-                            text = stringResource(R.string.lines_added_count, uiState.lines.size),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = GrayText,
-                            modifier = Modifier.padding(bottom = 4.dp)
-                        )
+                    // ========== 顶部：智能通勤走廊看板 ==========
+                    if (!corridorState.isEmpty && corridorState.corridor != null) {
+                        item(key = "commute_corridor") {
+                            CommuteCorridorCard(
+                                corridorState = corridorState,
+                                onToggleDirection = { viewModel.toggleCorridorDirection() }
+                            )
+                        }
+
+                        item(key = "section_header") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp, bottom = 2.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "全部独立线路 (${uiState.lines.size})",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    text = "30秒自动刷新",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = GrayText
+                                )
+                            }
+                        }
+                    } else {
+                        item {
+                            Text(
+                                text = stringResource(R.string.lines_added_count, uiState.lines.size),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = GrayText,
+                                modifier = Modifier.padding(bottom = 4.dp)
+                            )
+                        }
                     }
 
+                    // ========== 单条线路列表 ==========
                     items(
                         items = uiState.lines,
                         key = { it.id }
@@ -193,31 +226,29 @@ private fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // 公交车图标占位
         Box(
             modifier = Modifier
                 .size(80.dp)
                 .background(
-                    BluePrimary.copy(alpha = 0.1f),
-                    CircleShape
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = CircleShape
                 ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Filled.DirectionsBus,
+                imageVector = Icons.Default.DirectionsBus,
                 contentDescription = null,
                 modifier = Modifier.size(40.dp),
-                tint = BluePrimary.copy(alpha = 0.5f)
+                tint = GrayText
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Text(
             text = stringResource(R.string.empty_state_title),
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
         )
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -229,30 +260,27 @@ private fun EmptyState(
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Button(
             onClick = onAddLineClick,
-            shape = CircleShape,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = BluePrimary
-            )
+            colors = ButtonDefaults.buttonColors(containerColor = BluePrimary)
         ) {
             Icon(
-                imageVector = androidx.compose.material.icons.Icons.Default.Add,
+                imageVector = Icons.Default.Add,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(stringResource(R.string.add_first_line))
+            Text(text = stringResource(R.string.add_first_line))
         }
     }
 }
 
 /**
- * 获取当前时间文本
+ * 获取当前时间展示文本
  */
 private fun getCurrentTimeText(): String {
-    val sdf = SimpleDateFormat("MMM dd, EEEE HH:mm", Locale.getDefault())
+    val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
     return sdf.format(Date())
 }

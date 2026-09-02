@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.saidi.busassistant.data.local.LineFrequencyResult
 import com.saidi.busassistant.data.local.entity.BusLineEntity
+import com.saidi.busassistant.data.local.entity.CommuteCorridorEntity
 import com.saidi.busassistant.data.remote.dto.BusInfo
 import com.saidi.busassistant.data.remote.dto.RealTimeData
 import com.saidi.busassistant.data.repository.BusRepository
@@ -12,12 +13,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 import javax.inject.Inject
 
 /**
  * 首页 ViewModel
- * 管理实时看板数据、智能排序、用户交互
+ * 管理实时看板数据、智能行程预估、通勤走廊多线聚合
  */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -42,6 +45,13 @@ class HomeViewModel @Inject constructor(
     private val _realTimeDataMap = MutableStateFlow<Map<Long, RealTimeDataDisplay>>(emptyMap())
     val realTimeDataMap: StateFlow<Map<Long, RealTimeDataDisplay>> = _realTimeDataMap.asStateFlow()
 
+    // 智能通勤走廊状态
+    private val _corridorState = MutableStateFlow(CommuteCorridorUiState())
+    val corridorState: StateFlow<CommuteCorridorUiState> = _corridorState.asStateFlow()
+
+    // 用户手动选择的方向（为空时使用算法自动推测）
+    private val _manualDirectionOverride = MutableStateFlow<String?>(null)
+
     // 智能排序结果
     private val _smartOrder = MutableStateFlow<List<Long>>(emptyList())
 
@@ -51,24 +61,135 @@ class HomeViewModel @Inject constructor(
     // ========== Init ==========
 
     init {
-        loadLines()
-        startAutoRefresh()
+        viewModelScope.launch {
+            // 预置北京康家沟-四惠东通勤线路（若初次运行为空）
+            repository.seedBeijingCommuteData()
+            loadCorridorsAndLines()
+            startAutoRefresh()
+        }
     }
 
-    // ========== 线路管理 ==========
+    // ========== 线路与通勤走廊管理 ==========
 
-    private fun loadLines() {
+    private fun loadCorridorsAndLines() {
+        // 监听线路
         viewModelScope.launch {
-            repository.getAllLines()
-                .collect { lines ->
-                    val sortedLines = sortLinesIntelligently(lines)
-                    _uiState.update { it.copy(lines = sortedLines) }
-                    // 加载实时数据
-                    if (lines.isNotEmpty()) {
-                        refreshRealTimeData(lines)
-                    }
+            repository.getAllLines().collect { lines ->
+                val sortedLines = sortLinesIntelligently(lines)
+                _uiState.update { it.copy(lines = sortedLines, isEmpty = sortedLines.isEmpty()) }
+                if (lines.isNotEmpty()) {
+                    refreshRealTimeData(lines)
                 }
+            }
         }
+
+        // 监听走廊
+        viewModelScope.launch {
+            combine(
+                repository.getAllCorridors(),
+                _realTimeDataMap,
+                _manualDirectionOverride
+            ) { corridors, dataMap, manualDirection ->
+                updateCorridorUiState(corridors, dataMap, manualDirection)
+            }.collect { newState ->
+                _corridorState.value = newState
+            }
+        }
+    }
+
+    private fun inferCurrentDirection(): String {
+        val now = Calendar.getInstance()
+        val hour = now.get(Calendar.HOUR_OF_DAY)
+        val minute = now.get(Calendar.MINUTE)
+        val totalMinutes = hour * 60 + minute
+
+        // 6:00 - 12:00 默认为上班通勤 (康家沟 ➔ 四惠东)
+        // 16:30 - 22:30 默认为下班回家 (四惠东 ➔ 康家沟)
+        return when {
+            totalMinutes in (6 * 60)..(12 * 60) -> "WORK"
+            totalMinutes in (16 * 60 + 30)..(22 * 60 + 30) -> "HOME"
+            else -> "WORK"
+        }
+    }
+
+    private fun updateCorridorUiState(
+        corridors: List<CommuteCorridorEntity>,
+        dataMap: Map<Long, RealTimeDataDisplay>,
+        manualDirection: String?
+    ): CommuteCorridorUiState {
+        if (corridors.isEmpty()) {
+            return CommuteCorridorUiState(isEmpty = true)
+        }
+
+        val activeDirection = manualDirection ?: inferCurrentDirection()
+        val currentCorridor = corridors.find { it.directionType == activeDirection }
+            ?: corridors.first()
+
+        val candidateNumbers = currentCorridor.lineNumbers.split(",").map { it.trim() }
+        val lines = _uiState.value.lines.filter { it.lineNumber in candidateNumbers }
+
+        val candidateCards = lines.map { line ->
+            val display = dataMap[line.id]
+            val closest = display?.closestBus
+            val arrivalMins = closest?.minutesAway ?: 99
+            val stops = closest?.stationsAway ?: 99
+            val isArriving = closest?.isArriving ?: false
+
+            CorridorCandidateLine(
+                line = line,
+                realTimeData = display,
+                stopsAway = stops,
+                arrivalMinutes = arrivalMins,
+                isArriving = isArriving,
+                isEarliest = false
+            )
+        }.sortedBy { it.arrivalMinutes }
+
+        // 标记最快到站线路
+        val rankedCandidates = if (candidateCards.isNotEmpty() && candidateCards.first().arrivalMinutes < 90) {
+            candidateCards.mapIndexed { index, item ->
+                if (index == 0) item.copy(isEarliest = true) else item
+            }
+        } else {
+            candidateCards
+        }
+
+        val fastest = rankedCandidates.firstOrNull()
+        val recommendedLine = fastest?.line?.lineNumber
+        val earliestMins = fastest?.arrivalMinutes?.takeIf { it < 90 }
+
+        // 估算到达工位时间：当前时间 + 到站等待 + 公交行驶(约6分) + 下车步行
+        val estimatedArrivalText = earliestMins?.let { waitMins ->
+            val totalTransitAndWalk = waitMins + 6 + currentCorridor.walkingMinutesAfter
+            val calendar = Calendar.getInstance().apply {
+                add(Calendar.MINUTE, totalTransitAndWalk)
+            }
+            val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+            val formattedTime = timeFormat.format(calendar.time)
+            if (activeDirection == "WORK") {
+                "预计 $formattedTime 抵达公司工位 (含四惠东步行${currentCorridor.walkingMinutesAfter}分钟)"
+            } else {
+                "预计 $formattedTime 抵达公寓 (含步行${currentCorridor.walkingMinutesAfter}分钟)"
+            }
+        }
+
+        return CommuteCorridorUiState(
+            corridor = currentCorridor,
+            inferredDirection = activeDirection,
+            isAutoInferred = (manualDirection == null),
+            candidateLines = rankedCandidates,
+            recommendedLineNumber = recommendedLine,
+            earliestArrivalMinutes = earliestMins,
+            walkingMinutesAfter = currentCorridor.walkingMinutesAfter,
+            estimatedOfficeArrivalText = estimatedArrivalText,
+            isEmpty = false
+        )
+    }
+
+    fun toggleCorridorDirection() {
+        val currentDirection = _corridorState.value.inferredDirection
+        val newDirection = if (currentDirection == "WORK") "HOME" else "WORK"
+        _manualDirectionOverride.value = newDirection
     }
 
     fun addLine(line: BusLineEntity) {
@@ -82,7 +203,6 @@ class HomeViewModel @Inject constructor(
     fun deleteLine(line: BusLineEntity) {
         viewModelScope.launch {
             repository.deleteLine(line)
-            // 清除该线路的实时数据
             _realTimeDataMap.update { it - line.id }
         }
     }
@@ -124,8 +244,6 @@ class HomeViewModel @Inject constructor(
                     isCached = false
                 )
                 _realTimeDataMap.update { it + (line.id to display) }
-            }.onFailure { error ->
-                // 错误时保留旧数据
             }
         }
     }
@@ -133,9 +251,8 @@ class HomeViewModel @Inject constructor(
     private fun findClosestBus(buses: List<BusInfo>?, boardingIndex: Int): ClosestBusInfo? {
         if (buses.isNullOrEmpty()) return null
 
-        // 找到最接近用户站点的车辆
         val targetBus = buses
-            .filter { it.stationIndex <= boardingIndex + 3 } // 车辆还没走远
+            .filter { it.stationIndex <= boardingIndex + 2 }
             .maxByOrNull { it.stationIndex } ?: return null
 
         val stationsAway = (boardingIndex - targetBus.stationIndex).coerceAtLeast(0)
@@ -145,7 +262,7 @@ class HomeViewModel @Inject constructor(
             stationsAway = stationsAway,
             minutesAway = minutesAway,
             isArriving = targetBus.isArriving || minutesAway <= 2,
-            totalStations = boardingIndex + 5 // 估算总站点数
+            totalStations = boardingIndex + 5
         )
     }
 
@@ -153,7 +270,7 @@ class HomeViewModel @Inject constructor(
         autoRefreshJob?.cancel()
         autoRefreshJob = viewModelScope.launch {
             while (true) {
-                delay(30000) // 30秒自动刷新
+                delay(20000) // 20秒自动刷新实时公交状态
                 val lines = _uiState.value.lines
                 if (lines.isNotEmpty()) {
                     refreshRealTimeData(lines)
@@ -167,7 +284,6 @@ class HomeViewModel @Inject constructor(
     private suspend fun sortLinesIntelligently(lines: List<BusLineEntity>): List<BusLineEntity> {
         if (lines.size <= 1) return lines
 
-        // 获取当前时间上下文
         val now = Calendar.getInstance()
         val weekday = now.get(Calendar.DAY_OF_WEEK).let {
             when (it) {
@@ -182,15 +298,11 @@ class HomeViewModel @Inject constructor(
             }
         }
         val hour = now.get(Calendar.HOUR_OF_DAY)
-
-        // TODO: P1阶段接入真实地理位置，默认 "other"
         val locationZone = "other"
 
-        // 查询习惯数据
         val topLines = repository.getTopLinesByContext(weekday, hour, locationZone, limit = 3)
 
         return if (topLines.isNotEmpty()) {
-            // 按习惯频率排序
             val topLineIds = topLines.map { it.lineId }
             val (matched, unmatched) = lines.partition { it.id in topLineIds }
             val sortedMatched = matched.sortedBy { line ->
@@ -198,12 +310,9 @@ class HomeViewModel @Inject constructor(
             }
             sortedMatched + unmatched.sortedBy { it.displayOrder }
         } else {
-            // 无习惯数据，按 display_order
             lines.sortedBy { it.displayOrder }
         }
     }
-
-    // ========== 行为记录 ==========
 
     fun recordLineViewed(line: BusLineEntity) {
         viewModelScope.launch {
@@ -221,13 +330,11 @@ class HomeViewModel @Inject constructor(
                 }
             }
             val hour = now.get(Calendar.HOUR_OF_DAY)
-            val locationZone = "other" // TODO: P1阶段接入真实地理位置
+            val locationZone = "other"
 
             repository.logBehavior(weekday, hour, locationZone, line.id, line.lineNumber)
         }
     }
-
-    // ========== 设置 ==========
 
     fun clearAllLearningData() {
         viewModelScope.launch {
@@ -250,9 +357,27 @@ data class HomeUiState(
     val isEmpty: Boolean = true
 )
 
-/**
- * 实时数据展示模型
- */
+data class CorridorCandidateLine(
+    val line: BusLineEntity,
+    val realTimeData: RealTimeDataDisplay?,
+    val stopsAway: Int,
+    val arrivalMinutes: Int,
+    val isArriving: Boolean,
+    val isEarliest: Boolean
+)
+
+data class CommuteCorridorUiState(
+    val corridor: CommuteCorridorEntity? = null,
+    val inferredDirection: String = "WORK", // "WORK" 或 "HOME"
+    val isAutoInferred: Boolean = true,
+    val candidateLines: List<CorridorCandidateLine> = emptyList(),
+    val recommendedLineNumber: String? = null,
+    val earliestArrivalMinutes: Int? = null,
+    val walkingMinutesAfter: Int = 10,
+    val estimatedOfficeArrivalText: String? = null,
+    val isEmpty: Boolean = true
+)
+
 data class RealTimeDataDisplay(
     val lineId: Long,
     val lineNumber: String,
@@ -261,14 +386,11 @@ data class RealTimeDataDisplay(
     val isCached: Boolean = false
 )
 
-/**
- * 最近的车辆信息
- */
 data class ClosestBusInfo(
-    val stationsAway: Int,    // 还有几站到用户站点
-    val minutesAway: Int,     // 预计几分钟到达
-    val isArriving: Boolean,  // 是否即将到站
-    val totalStations: Int    // 总站点数（用于进度条）
+    val stationsAway: Int,
+    val minutesAway: Int,
+    val isArriving: Boolean,
+    val totalStations: Int
 ) {
     val progress: Float
         get() = if (totalStations > 0) {

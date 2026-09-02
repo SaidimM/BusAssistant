@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.saidi.busassistant.data.local.AppDatabase
 import com.saidi.busassistant.data.local.BusLineDao
 import com.saidi.busassistant.data.local.BehaviorLogDao
+import com.saidi.busassistant.data.local.CommuteCorridorDao
 import com.saidi.busassistant.data.remote.BeijingBusApi
 import com.saidi.busassistant.data.repository.BusRepository
 import dagger.Module
@@ -48,6 +49,12 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideCommuteCorridorDao(database: AppDatabase): CommuteCorridorDao {
+        return database.commuteCorridorDao()
+    }
+
+    @Provides
+    @Singleton
     fun provideOkHttpClient(): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
@@ -77,8 +84,9 @@ object AppModule {
     fun provideBusRepository(
         busLineDao: BusLineDao,
         behaviorLogDao: BehaviorLogDao,
+        commuteCorridorDao: CommuteCorridorDao,
         busApi: BeijingBusApi
     ): BusRepository {
-        return BusRepository(busLineDao, behaviorLogDao, busApi)
+        return BusRepository(busLineDao, behaviorLogDao, commuteCorridorDao, busApi)
     }
 }
