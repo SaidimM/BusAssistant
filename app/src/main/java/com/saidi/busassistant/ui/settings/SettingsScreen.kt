@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,21 +24,16 @@ import com.saidi.busassistant.ui.theme.*
 import com.saidi.busassistant.ui.viewmodel.HomeViewModel
 
 /**
- * 设置页面
+ * Settings Screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onHabitInsightsClick: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     var showClearConfirm by remember { mutableStateOf(false) }
-    val logCount by remember { mutableIntStateOf(0) }
-
-    // 加载日志数量
-    LaunchedEffect(Unit) {
-        // viewModel.getBehaviorLogCount() 可以在这里调用
-    }
 
     Scaffold(
         topBar = {
@@ -66,12 +62,23 @@ fun SettingsScreen(
         ) {
             // Data & Privacy
             SettingsSection(title = stringResource(R.string.data_and_privacy)) {
+                // Habit insights dashboard entry
+                SettingsClickableItem(
+                    icon = Icons.Default.Psychology,
+                    title = stringResource(R.string.habit_insights_title),
+                    subtitle = stringResource(R.string.habit_learning_subtitle),
+                    iconTint = BluePrimary,
+                    onClick = onHabitInsightsClick
+                )
+
+                Divider(modifier = Modifier.padding(horizontal = 16.dp))
+
                 // Location
                 SettingsSwitchItem(
                     icon = Icons.Default.LocationOn,
                     title = stringResource(R.string.use_location),
                     subtitle = stringResource(R.string.use_location_subtitle),
-                    checked = true, // TODO: read from DataStore
+                    checked = true,
                     onCheckedChange = { /* TODO */ }
                 )
 
@@ -80,7 +87,7 @@ fun SettingsScreen(
                     icon = Icons.Default.BarChart,
                     title = stringResource(R.string.record_usage_habits),
                     subtitle = stringResource(R.string.record_usage_habits_subtitle),
-                    checked = true, // TODO: read from DataStore
+                    checked = true,
                     onCheckedChange = { /* TODO */ }
                 )
             }
@@ -118,7 +125,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
-                        text = "1.0.0-mvp",
+                        text = "1.1.0-radar",
                         style = MaterialTheme.typography.labelMedium,
                         color = GrayText
                     )
@@ -137,7 +144,7 @@ fun SettingsScreen(
         }
     }
 
-    // 清除确认对话框
+    // Clear confirmation dialog
     if (showClearConfirm) {
         AlertDialog(
             onDismissRequest = { showClearConfirm = false },
@@ -165,7 +172,7 @@ fun SettingsScreen(
 }
 
 /**
- * 设置分区
+ * Settings section container.
  */
 @Composable
 private fun SettingsSection(
@@ -194,7 +201,7 @@ private fun SettingsSection(
 }
 
 /**
- * 带 Switch 的设置项
+ * Settings toggle item.
  */
 @Composable
 private fun SettingsSwitchItem(
@@ -244,7 +251,7 @@ private fun SettingsSwitchItem(
 }
 
 /**
- * 可点击的设置项
+ * Clickable settings item.
  */
 @Composable
 private fun SettingsClickableItem(
@@ -285,7 +292,7 @@ private fun SettingsClickableItem(
 }
 
 /**
- * 纯信息展示项
+ * Read-only information settings item.
  */
 @Composable
 private fun SettingsInfoItem(

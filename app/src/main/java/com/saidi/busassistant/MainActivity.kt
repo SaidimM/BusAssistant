@@ -9,20 +9,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import com.saidi.busassistant.ui.addline.AddLineScreen
+import com.saidi.busassistant.ui.habits.HabitInsightsScreen
 import com.saidi.busassistant.ui.home.HomeScreen
 import com.saidi.busassistant.ui.settings.SettingsScreen
 import com.saidi.busassistant.ui.theme.BusAssistantTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
- * MainActivity —— 应用入口
- * 使用 Jetpack Navigation + Compose 管理页面路由
+ * MainActivity - Application entry point.
+ * Uses Jetpack Navigation + Compose to manage application routes.
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -41,7 +40,7 @@ class MainActivity : ComponentActivity() {
                         navController = navController,
                         startDestination = Screen.Home.route
                     ) {
-                        // 首页 —— 实时公交看板
+                        // Home Screen - Real-time transit radar & favorite lines
                         composable(
                             route = Screen.Home.route,
                             enterTransition = { fadeIn(animationSpec = tween(300)) },
@@ -53,11 +52,35 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onSettingsClick = {
                                     navController.navigate(Screen.Settings.route)
+                                },
+                                onHabitInsightsClick = {
+                                    navController.navigate(Screen.HabitInsights.route)
                                 }
                             )
                         }
 
-                        // 添加线路
+                        // Commute Memory & Habit Insights
+                        composable(
+                            route = Screen.HabitInsights.route,
+                            enterTransition = {
+                                slideInHorizontally(
+                                    initialOffsetX = { it },
+                                    animationSpec = tween(300)
+                                ) + fadeIn(tween(300))
+                            },
+                            exitTransition = {
+                                slideOutHorizontally(
+                                    targetOffsetX = { it },
+                                    animationSpec = tween(300)
+                                ) + fadeOut(tween(300))
+                            }
+                        ) {
+                            HabitInsightsScreen(
+                                onBack = { navController.popBackStack() }
+                            )
+                        }
+
+                        // Add Bus Line Flow
                         composable(
                             route = Screen.AddLine.route,
                             enterTransition = {
@@ -78,7 +101,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
 
-                        // 设置
+                        // Settings Screen
                         composable(
                             route = Screen.Settings.route,
                             enterTransition = {
@@ -95,7 +118,8 @@ class MainActivity : ComponentActivity() {
                             }
                         ) {
                             SettingsScreen(
-                                onBack = { navController.popBackStack() }
+                                onBack = { navController.popBackStack() },
+                                onHabitInsightsClick = { navController.navigate(Screen.HabitInsights.route) }
                             )
                         }
                     }
@@ -106,10 +130,11 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * 页面路由定义
+ * Application screen routes.
  */
 sealed class Screen(val route: String) {
     data object Home : Screen("home")
+    data object HabitInsights : Screen("habit_insights")
     data object AddLine : Screen("add_line")
     data object Settings : Screen("settings")
 }

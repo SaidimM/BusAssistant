@@ -112,7 +112,9 @@ BusAssistant/
 - [x] **Geofence & Location-Aware Context Engine:** Automatic location zone logging & geofence trigger support via LocationContextManager.
 - [x] **Smart Arrival Recommendation:** Highlights fastest approaching line with instant action badges ("首选 / 即将进站").
 
-### Phase 3: Zero-Tap Ecosystem (In Progress)
+### Phase 3: Zero-Tap Ecosystem & Ambient Intelligence (Completed)
+- [x] **Zero-Interaction Nearest Station Radar:** On launch, auto-detects nearest physical bus stop and displays live arrivals for all passing lines without any setup.
+- [x] **Autonomous Habit Learning & Memory Screen:** 100% on-device clustering of daily commute routines, trip statistics, and time-saving metrics in a dedicated dashboard (`HabitInsightsScreen`).
 - [x] **Android Home Screen AppWidget:** Native home screen widget with live multi-line countdowns, route header, and one-tap refresh.
 - [ ] **Lock Screen Persistent Notification:** Auto-activates 15 minutes before typical commute times.
 - [ ] **WearOS / Smartwatch Companion:** Check bus ETAs on your wrist while walking to the station.

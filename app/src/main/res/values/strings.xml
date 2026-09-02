@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">BusAssistant</string>
 
-    <!-- Home -->
+    <!-- Home & Navigation -->
     <string name="home_title">My Buses</string>
     <string name="refresh">Refresh</string>
     <string name="settings">Settings</string>
@@ -10,6 +10,20 @@
     <string name="empty_state_title">No lines added yet</string>
     <string name="empty_state_subtitle">Add the bus lines you take often.\nOpen the app to see real-time arrivals.</string>
     <string name="add_first_line">Add your first line</string>
+
+    <!-- Nearby Station Radar -->
+    <string name="nearby_radar_title">Nearby Station Radar</string>
+    <string name="fastest_bus_prompt">Fastest bus in %1$d min</string>
+    <string name="flip_direction">Flip direction</string>
+    <string name="distance_walk_format">%1$dm · ~%2$d min walk</string>
+    <string name="pin_to_favorites">Pin to favorites</string>
+    <string name="habit_morning_match">🌅 Habit match: Morning Commute · %1$s recommended</string>
+    <string name="habit_evening_match">🌇 Habit match: Evening Return · %1$s recommended</string>
+    <string name="no_nearby_lines">No passing lines detected</string>
+    <string name="add_lines_first_hint">Please search and add frequent lines</string>
+    <string name="add_lines_first_sub">Nearby radar will automatically show live departures</string>
+    <string name="passing_lines_count">Serves %1$d frequent lines</string>
+    <string name="switch_platform">Switch platform</string>
 
     <!-- Bus line card -->
     <string name="boarding_station">Boarding stop: %1$s</string>
@@ -42,7 +56,7 @@
     <!-- Add line flow -->
     <string name="add_line_title">Add bus line</string>
     <string name="back">Back</string>
-    <string name="search_placeholder">Enter line number, e.g. 375, 601</string>
+    <string name="search_placeholder">Enter line number, e.g. 1, 33, 375</string>
     <string name="search">Search</string>
     <string name="search_results">Search results (%1$d)</string>
     <string name="no_results">No lines found, try another keyword</string>
@@ -55,6 +69,38 @@
     <string name="start">Start</string>
     <string name="end">End</string>
     <string name="boarding_stop">Boarding stop</string>
+
+    <!-- Habit Insights & Memory -->
+    <string name="habit_insights_title">Commute Memory &amp; Habits</string>
+    <string name="habit_insights_subtitle">100% On-Device Privacy · Zero Cloud Upload</string>
+    <string name="habit_learning_title">Learning Your Daily Commute Habits</string>
+    <string name="habit_learning_subtitle">Automatically infers destinations based on time and location. Next departure ready upon launch without searching.</string>
+    <string name="monthly_overview">Monthly Commute Overview</string>
+    <string name="stat_trips_tracked">Trips Tracked</string>
+    <string name="stat_time_saved">Wait Time Saved</string>
+    <string name="stat_trips_unit">%1$d trips</string>
+    <string name="stat_time_unit">~%1$d min</string>
+    <string name="stat_top_station">Top Station</string>
+    <string name="stat_top_line">Top Line</string>
+    <string name="learned_routines_count">Identified Commute Patterns (%1$d)</string>
+    <string name="confidence_score">%1$d%% Confidence</string>
+    <string name="preferred_lines">Preferred:</string>
+    <string name="typical_time">Typical: %1$s (%2$d trips recorded)</string>
+    <string name="delete_routine">Delete this pattern</string>
+    <string name="privacy_title">On-Device Data Sovereignty</string>
+    <string name="privacy_description">All time slices and location zones are stored locally in SQLite. No data is ever transmitted to external servers. You can reset anytime.</string>
+    <string name="clear_habits_button">Reset &amp; Clear All Learned Habits</string>
+    <string name="clear_habits_dialog_title">Clear all commute habit data?</string>
+    <string name="clear_habits_dialog_message">This will delete all local behavior logs and reset learned commute routines.</string>
+    <string name="confirm_clear">Confirm Clear</string>
+    <string name="routine_accumulating_title">Building Commute Habits</string>
+    <string name="routine_accumulating_subtitle">After commuting for a few days, the system will automatically identify morning/evening peak lines and time savings.</string>
+
+    <!-- Commute Corridor -->
+    <string name="commute_corridor_title">Commute Corridor</string>
+    <string name="estimated_arrival_format">Estimated arrival at %1$s (incl. %2$d min walk after arrival)</string>
+    <string name="switch_corridor">Switch corridor</string>
+    <string name="earliest_arrival">Earliest</string>
 
     <!-- Settings -->
     <string name="data_and_privacy">Data &amp; Privacy</string>
@@ -69,7 +115,7 @@
     <string name="data_note">Data note</string>
     <string name="data_note_subtitle">All data is stored only on your device. No data is uploaded to any server.\n\nReal-time bus data comes from the official Beijing bus API.</string>
     <string name="version">Version</string>
-    <string name="footer_text">BusAssistant MVP\nAll data stored locally. Your privacy is protected.</string>
+    <string name="footer_text">BusAssistant\nAll data stored locally. Your privacy is protected.</string>
     <string name="clear_data_title">Clear learning data</string>
     <string name="clear_data_message">Delete all usage habit data?\nThis will reset smart recommendations.</string>
     <string name="clear">Clear</string>

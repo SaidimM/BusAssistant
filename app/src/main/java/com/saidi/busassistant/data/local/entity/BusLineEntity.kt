@@ -5,7 +5,7 @@ import androidx.room.PrimaryKey
 import androidx.room.ColumnInfo
 
 /**
- * 用户收藏的公交线路
+ * User saved / favorite bus line entity.
  */
 @Entity(tableName = "bus_lines")
 data class BusLineEntity(
@@ -13,34 +13,34 @@ data class BusLineEntity(
     val id: Long = 0,
 
     @ColumnInfo(name = "line_number")
-    val lineNumber: String,           // 线路号，如 "375"
+    val lineNumber: String,           // Line identifier, e.g., "375"
 
     @ColumnInfo(name = "line_name")
-    val lineName: String,             // 线路名称，如 "375路"
+    val lineName: String,             // Display name, e.g., "Line 375"
 
     @ColumnInfo(name = "direction")
-    val direction: String,            // 方向，如 "上行" 或 "下行"
+    val direction: String,            // Direction, e.g., "Outbound" or "Inbound"
 
     @ColumnInfo(name = "start_station")
-    val startStation: String,         // 起始站
+    val startStation: String,         // Departure origin terminal
 
     @ColumnInfo(name = "end_station")
-    val endStation: String,           // 终点站
+    val endStation: String,           // Destination terminal
 
     @ColumnInfo(name = "user_boarding_station")
-    val userBoardingStation: String,  // 用户上车站点
+    val userBoardingStation: String,  // User designated boarding stop
 
     @ColumnInfo(name = "user_alighting_station")
-    val userAlightingStation: String, // 用户下车站点
+    val userAlightingStation: String, // User designated alighting stop
 
     @ColumnInfo(name = "boarding_station_index")
-    val boardingStationIndex: Int,    // 上车站点在全线中的索引（用于计算车辆距离）
+    val boardingStationIndex: Int,    // 0-indexed position along route
 
     @ColumnInfo(name = "user_label")
-    val userLabel: String? = null,    // 用户标注：上班/回家/自定义
+    val userLabel: String? = null,    // User label: work, home, custom
 
     @ColumnInfo(name = "display_order")
-    val displayOrder: Int = 0,        // 显示顺序
+    val displayOrder: Int = 0,        // Custom ordering rank
 
     @ColumnInfo(name = "created_at")
     val createdAt: Long = System.currentTimeMillis()

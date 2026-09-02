@@ -10,6 +10,7 @@ import android.widget.RemoteViews
 import com.saidi.busassistant.MainActivity
 import com.saidi.busassistant.R
 import com.saidi.busassistant.data.repository.BusRepository
+import com.saidi.busassistant.util.LocationContextManager
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -20,8 +21,8 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 /**
- * 桌面微件 (Home Screen AppWidget)
- * 实现通勤走廊“零次点击、一秒即览”核心体验
+ * Home Screen AppWidget Provider.
+ * Displays live commute corridor departures or nearby station radar for 1-second glanceability.
  */
 class BusCommuteWidgetProvider : AppWidgetProvider() {
 
@@ -29,6 +30,7 @@ class BusCommuteWidgetProvider : AppWidgetProvider() {
     @InstallIn(SingletonComponent::class)
     interface WidgetEntryPoint {
         fun busRepository(): BusRepository
+        fun locationContextManager(): LocationContextManager
     }
 
     override fun onUpdate(
@@ -60,7 +62,7 @@ class BusCommuteWidgetProvider : AppWidgetProvider() {
     ) {
         val views = RemoteViews(context.packageName, R.layout.widget_commute_corridor)
 
-        // 点击打开 App
+        // Tap container to open MainActivity
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -72,7 +74,7 @@ class BusCommuteWidgetProvider : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.widget_container, openAppPendingIntent)
 
-        // 点击刷新按钮
+        // Tap refresh button
         val refreshIntent = Intent(context, BusCommuteWidgetProvider::class.java).apply {
             action = ACTION_REFRESH_WIDGET
         }
@@ -84,7 +86,7 @@ class BusCommuteWidgetProvider : AppWidgetProvider() {
         )
         views.setOnClickPendingIntent(R.id.widget_btn_refresh, refreshPendingIntent)
 
-        // 异步查询当前通勤走廊与各线路到站状态
+        // Asynchronously query commute corridor or nearest bus stop
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val entryPoint = EntryPointAccessors.fromApplication(
@@ -92,10 +94,13 @@ class BusCommuteWidgetProvider : AppWidgetProvider() {
                     WidgetEntryPoint::class.java
                 )
                 val repository = entryPoint.busRepository()
+                val locationContextManager = entryPoint.locationContextManager()
+
                 val corridors = repository.getAllCorridors().firstOrNull() ?: emptyList()
                 val lines = repository.getAllLines().firstOrNull() ?: emptyList()
 
                 if (corridors.isNotEmpty()) {
+                    // Mode A: Active commute corridor exists
                     val activeCorridor = corridors.first()
                     val candidateLineNumbers = activeCorridor.lineNumbers.split(",").map { it.trim() }
                     val candidateLines = lines.filter { it.lineNumber in candidateLineNumbers }
@@ -113,7 +118,7 @@ class BusCommuteWidgetProvider : AppWidgetProvider() {
                         result.onSuccess { data ->
                             val closest = data.buses?.minByOrNull { it.arrivalTimeEstimate ?: 9999 }
                             val mins = closest?.arrivalTimeEstimate?.div(60) ?: 10
-                            linesSummaryList.add("${line.lineNumber}路: ${mins}分")
+                            linesSummaryList.add("${line.lineNumber}: ${mins}m")
                             if (mins < earliestMinutes) {
                                 earliestMinutes = mins
                                 fastestLineNumber = line.lineNumber
@@ -130,29 +135,58 @@ class BusCommuteWidgetProvider : AppWidgetProvider() {
                     if (fastestLineNumber != null && earliestMinutes < 900) {
                         views.setTextViewText(
                             R.id.widget_fastest_label,
-                            "首选: ${fastestLineNumber}路 (${if (earliestMinutes <= 2) "即将到站" else "离你最近"})"
+                            "Next: $fastestLineNumber (${if (earliestMinutes <= 2) "Arriving" else "Fastest"})"
                         )
                         views.setTextViewText(
                             R.id.widget_fastest_countdown,
-                            if (earliestMinutes == 0) "已进站" else "${earliestMinutes} 分钟"
+                            if (earliestMinutes == 0) "Arrived" else "$earliestMinutes min"
                         )
                     }
 
                     if (linesSummaryList.isNotEmpty()) {
                         views.setTextViewText(
                             R.id.widget_lines_summary,
-                            "候选: " + linesSummaryList.joinToString("  |  ")
+                            "Lines: " + linesSummaryList.joinToString("  |  ")
                         )
                     }
                 } else {
-                    views.setTextViewText(R.id.widget_route_title, "暂未设置通勤走廊")
-                    views.setTextViewText(R.id.widget_fastest_label, "打开 App 添加常用公交线路")
-                    views.setTextViewText(R.id.widget_fastest_countdown, "--")
+                    // Mode B: Zero-configuration fallback to Nearby Station Radar
+                    val loc = locationContextManager.getLastKnownLocation()
+                    val lat = loc?.latitude ?: 39.9982
+                    val lon = loc?.longitude ?: 116.4741
+
+                    val (nearestStation, distance) = repository.findNearestStation(lat, lon)
+                    val arrivals = repository.getNearbyStationArrivals(nearestStation)
+                    val fastest = arrivals.firstOrNull()
+
+                    views.setTextViewText(R.id.widget_tag, "📍 Nearby Stop")
+                    views.setTextViewText(
+                        R.id.widget_route_title,
+                        "${nearestStation.stationName} (${distance.toInt()}m)"
+                    )
+
+                    if (fastest != null) {
+                        views.setTextViewText(
+                            R.id.widget_fastest_label,
+                            "Next: ${fastest.lineNumber} (${if (fastest.isArriving) "Arriving" else "Fastest"})"
+                        )
+                        views.setTextViewText(
+                            R.id.widget_fastest_countdown,
+                            if (fastest.arrivalMinutes == 0) "Arrived" else "${fastest.arrivalMinutes} min"
+                        )
+                        val summary = arrivals.map { "${it.lineNumber}: ${it.arrivalMinutes}m" }
+                        views.setTextViewText(
+                            R.id.widget_lines_summary,
+                            "Passing: " + summary.joinToString("  |  ")
+                        )
+                    } else {
+                        views.setTextViewText(R.id.widget_fastest_label, "Tap refresh for live departures")
+                        views.setTextViewText(R.id.widget_fastest_countdown, "--")
+                    }
                 }
 
                 appWidgetManager.updateAppWidget(appWidgetId, views)
             } catch (_: Exception) {
-                // 异常时保留默认视图
                 appWidgetManager.updateAppWidget(appWidgetId, views)
             }
         }

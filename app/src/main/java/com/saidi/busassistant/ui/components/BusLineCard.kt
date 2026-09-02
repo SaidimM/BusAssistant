@@ -21,19 +21,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.saidi.busassistant.R
 import com.saidi.busassistant.data.local.entity.BusLineEntity
 import com.saidi.busassistant.ui.theme.*
-import com.saidi.busassistant.ui.viewmodel.ClosestBusInfo
 import com.saidi.busassistant.ui.viewmodel.RealTimeDataDisplay
 
 /**
- * 公交线路卡片
- * 展示单条线路的实时状态
+ * Bus line departure card.
+ * Displays real-time departure countdown, boarding stop, and progress bar for a single route.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,13 +60,13 @@ fun BusLineCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // 顶部：线路信息 + 操作按钮
+            // Header: Route metadata & action buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 线路号和图标
+                // Line Number & Icon
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -102,12 +100,11 @@ fun BusLineCard(
                     }
                 }
 
-                // 右侧：标签 + 删除
+                // Right: Label & Delete actions
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // 用户标签
                     if (line.userLabel != null) {
                         UserLabelChip(
                             label = line.userLabel,
@@ -127,7 +124,6 @@ fun BusLineCard(
                         }
                     }
 
-                    // 删除按钮
                     IconButton(
                         onClick = { showDeleteConfirm = true },
                         modifier = Modifier.size(32.dp)
@@ -144,7 +140,7 @@ fun BusLineCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 站点信息
+            // Boarding stop info
             Text(
                 text = stringResource(R.string.boarding_station, line.userBoardingStation),
                 style = MaterialTheme.typography.labelMedium,
@@ -153,13 +149,13 @@ fun BusLineCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // 实时进度条
+            // Real-time canvas progress bar
             BusProgressBar(
                 closestBus = realTimeData?.closestBus,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // 底部：详细信息
+            // Footer: Distance and countdown details
             realTimeData?.closestBus?.let { bus ->
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
@@ -198,7 +194,7 @@ fun BusLineCard(
         }
     }
 
-    // 删除确认对话框
+    // Delete confirmation dialog
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
@@ -224,7 +220,7 @@ fun BusLineCard(
 }
 
 /**
- * 用户标签 Chip
+ * User label chip component.
  */
 @Composable
 fun UserLabelChip(
@@ -266,7 +262,7 @@ fun UserLabelChip(
 }
 
 /**
- * 标签选择对话框
+ * User label selection dialog.
  */
 @Composable
 fun LabelSelectionDialog(
@@ -320,7 +316,6 @@ fun LabelSelectionDialog(
                     }
                 }
 
-                // 清除标签选项
                 if (currentLabel != null) {
                     Spacer(modifier = Modifier.height(8.dp))
                     TextButton(

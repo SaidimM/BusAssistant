@@ -17,9 +17,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.saidi.busassistant.R
 import com.saidi.busassistant.ui.theme.BluePrimary
 import com.saidi.busassistant.ui.theme.GreenSuccess
 import com.saidi.busassistant.ui.theme.OrangeWarning
@@ -27,8 +28,8 @@ import com.saidi.busassistant.ui.viewmodel.CommuteCorridorUiState
 import com.saidi.busassistant.ui.viewmodel.CorridorCandidateLine
 
 /**
- * 通用通勤走廊卡片
- * 聚合同一走廊（如任意 [起点] ➔ [终点]）的所有候选公交线路，展示秒级到站对比
+ * Commute Corridor Hero Card
+ * Aggregates all passing candidate lines along the same origin-destination route
  */
 @Composable
 fun CommuteCorridorCard(
@@ -51,7 +52,7 @@ fun CommuteCorridorCard(
                 .fillMaxWidth()
                 .padding(18.dp)
         ) {
-            // ========== 顶部标题栏 ==========
+            // ========== Header ==========
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -67,7 +68,7 @@ fun CommuteCorridorCard(
                             color = BluePrimary.copy(alpha = 0.12f)
                         ) {
                             Text(
-                                text = corridor.corridorTag.ifBlank { "通勤走廊" },
+                                text = corridor.corridorTag.ifBlank { stringResource(R.string.commute_corridor_title) },
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = BluePrimary,
@@ -81,7 +82,7 @@ fun CommuteCorridorCard(
                                 color = MaterialTheme.colorScheme.surfaceVariant
                             ) {
                                 Text(
-                                    text = "习惯推测",
+                                    text = stringResource(R.string.stat_top_line),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -99,7 +100,7 @@ fun CommuteCorridorCard(
                     )
                 }
 
-                // 若存在多条走廊，提供切换按钮
+                // Switch corridor button
                 if (corridorState.availableCorridors.size > 1) {
                     FilledTonalIconButton(
                         onClick = onSwitchCorridor,
@@ -110,7 +111,7 @@ fun CommuteCorridorCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.SwapHoriz,
-                            contentDescription = "切换走廊",
+                            contentDescription = stringResource(R.string.switch_corridor),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -119,7 +120,7 @@ fun CommuteCorridorCard(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // ========== 最快到站推荐 Banner ==========
+            // ========== Fastest Departure Recommendation ==========
             val fastestLine = corridorState.recommendedLineNumber
             val earliestMins = corridorState.earliestArrivalMinutes
 
@@ -160,7 +161,7 @@ fun CommuteCorridorCard(
 
                             Column {
                                 Text(
-                                    text = "首选: ${fastestLine}路",
+                                    text = "Line $fastestLine",
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = if (earliestMins <= 2)
@@ -169,7 +170,10 @@ fun CommuteCorridorCard(
                                         BluePrimary
                                 )
                                 Text(
-                                    text = if (earliestMins <= 2) "即将进站，快出门！" else "离你最近，优先乘坐",
+                                    text = if (earliestMins <= 2)
+                                        stringResource(R.string.arriving_soon)
+                                    else
+                                        stringResource(R.string.fastest_bus_prompt, earliestMins),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -178,7 +182,10 @@ fun CommuteCorridorCard(
 
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
-                                text = if (earliestMins == 0) "已到站" else "${earliestMins}分钟",
+                                text = if (earliestMins == 0)
+                                    stringResource(R.string.within_one_minute)
+                                else
+                                    stringResource(R.string.about_minutes, earliestMins),
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Black,
                                 color = if (earliestMins <= 2) GreenSuccess else BluePrimary
@@ -190,7 +197,7 @@ fun CommuteCorridorCard(
                 Spacer(modifier = Modifier.height(10.dp))
             }
 
-            // ========== 下车步行与预计到达时间 ==========
+            // ========== Walking time & arrival estimate ==========
             corridorState.estimatedOfficeArrivalText?.let { arrivalText ->
                 Row(
                     modifier = Modifier
@@ -219,9 +226,9 @@ fun CommuteCorridorCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ========== 候选线路实时对比列表 ==========
+            // ========== Candidate Lines List ==========
             Text(
-                text = "可选线路 (${corridorState.candidateLines.size}条)",
+                text = stringResource(R.string.passing_lines_count, corridorState.candidateLines.size),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -275,7 +282,10 @@ private fun CandidateLineRow(candidate: CorridorCandidateLine) {
                 }
 
                 Text(
-                    text = if (candidate.stopsAway < 90) "还有 ${candidate.stopsAway} 站" else "暂无位置",
+                    text = if (candidate.stopsAway < 90)
+                        stringResource(R.string.stops_away, candidate.stopsAway)
+                    else
+                        stringResource(R.string.no_real_time_data),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -289,7 +299,6 @@ private fun CandidateLineRow(candidate: CorridorCandidateLine) {
                 val (badgeColor, textColor) = when {
                     mins <= 2 -> Pair(GreenSuccess.copy(alpha = 0.15f), GreenSuccess)
                     mins <= 7 -> Pair(OrangeWarning.copy(alpha = 0.15f), OrangeWarning)
-                    mins < 90 -> Pair(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.outline)
                     else -> Pair(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.outline)
                 }
 
@@ -299,8 +308,8 @@ private fun CandidateLineRow(candidate: CorridorCandidateLine) {
                 ) {
                     Text(
                         text = when {
-                            mins == 0 -> "即将到站"
-                            mins < 90 -> "~${mins} 分钟"
+                            mins == 0 -> stringResource(R.string.arriving_soon)
+                            mins < 90 -> stringResource(R.string.about_minutes, mins)
                             else -> "--"
                         },
                         style = MaterialTheme.typography.labelMedium,

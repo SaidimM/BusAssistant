@@ -11,8 +11,8 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 位置上下文与地理围栏辅助类 (Phase 2 & 3)
- * 用于判断用户当前是否靠近某个起始站点或换乘枢纽，辅助自动推测通勤方向
+ * Location context and spatial proximity utility.
+ * Identifies nearest transit stops for zero-interaction departure radar.
  */
 @Singleton
 class LocationContextManager @Inject constructor(
@@ -20,7 +20,7 @@ class LocationContextManager @Inject constructor(
 ) {
 
     /**
-     * 检查是否有位置权限
+     * Checks if fine or coarse location permission is granted.
      */
     fun hasLocationPermission(): Boolean {
         val fine = ContextCompat.checkSelfPermission(
@@ -35,7 +35,7 @@ class LocationContextManager @Inject constructor(
     }
 
     /**
-     * 获取最新已知粗略位置（零后台耗电）
+     * Retrieves best cached location without waking up GPS hardware.
      */
     fun getLastKnownLocation(): Location? {
         if (!hasLocationPermission()) return null
@@ -49,36 +49,45 @@ class LocationContextManager @Inject constructor(
         for (provider in providers) {
             try {
                 val loc = locationManager.getLastKnownLocation(provider) ?: continue
-                if (bestLocation == null || loc.accuracy < bestLocation.accuracy) {
+                if (bestLocation == null || (loc.accuracy > 0 && loc.accuracy < bestLocation.accuracy)) {
                     bestLocation = loc
                 }
             } catch (_: SecurityException) {
-                // 安全异常静默捕获
+                // Ignore security exceptions gracefully
             }
         }
         return bestLocation
     }
 
     /**
-     * 计算当前位置到目标经纬度的直线距离（米）
+     * Calculates distance from current position to target coordinates in meters.
      */
     fun distanceTo(targetLat: Double, targetLon: Double): Float? {
         val current = getLastKnownLocation() ?: return null
+        return calculateDistance(current.latitude, current.longitude, targetLat, targetLon)
+    }
+
+    /**
+     * Calculates straight-line distance between two geographic coordinates in meters.
+     */
+    fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
         val results = FloatArray(1)
-        Location.distanceBetween(
-            current.latitude,
-            current.longitude,
-            targetLat,
-            targetLon,
-            results
-        )
+        Location.distanceBetween(lat1, lon1, lat2, lon2, results)
         return results[0]
     }
 
     /**
-     * 判断是否在某站点的近距离范围（如 500 米地理围栏以内）
+     * Estimates normal walking duration in minutes (~75 meters/minute walking speed).
      */
-    fun isNearStation(targetLat: Double, targetLon: Double, radiusMeters: Float = 500f): Boolean {
+    fun calculateWalkingMinutes(distanceMeters: Int): Int {
+        val mins = Math.ceil(distanceMeters / 75.0).toInt()
+        return mins.coerceAtLeast(1)
+    }
+
+    /**
+     * Determines whether the user is within a geofenced proximity radius of a bus stop.
+     */
+    fun isNearStation(targetLat: Double, targetLon: Double, radiusMeters: Float = 800f): Boolean {
         val dist = distanceTo(targetLat, targetLon) ?: return false
         return dist <= radiusMeters
     }

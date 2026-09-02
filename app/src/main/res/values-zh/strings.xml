@@ -1,0 +1,122 @@
+<resources>
+    <string name="app_name">公交助手</string>
+
+    <!-- 首页与导航 -->
+    <string name="home_title">常用公交</string>
+    <string name="refresh">刷新</string>
+    <string name="settings">设置</string>
+    <string name="add_line">添加线路</string>
+    <string name="lines_added_count">已添加 %1$d 条线路</string>
+    <string name="empty_state_title">暂未添加任何线路</string>
+    <string name="empty_state_subtitle">添加常坐的公交线路，\n打开应用即可查看实时到站信息。</string>
+    <string name="add_first_line">添加第一条线路</string>
+
+    <!-- 附近站点雷达 -->
+    <string name="nearby_radar_title">附近站点雷达</string>
+    <string name="fastest_bus_prompt">最快一班 %1$d 分钟后到达</string>
+    <string name="flip_direction">对向站台</string>
+    <string name="distance_walk_format">%1$d米 · 步行约%2$d分钟</string>
+    <string name="pin_to_favorites">设为常用</string>
+    <string name="habit_morning_match">🌅 命中习惯：早间上班通勤 · 推荐乘坐 %1$s</string>
+    <string name="habit_evening_match">🌇 命中习惯：晚间下班回程 · 推荐乘坐 %1$s</string>
+    <string name="no_nearby_lines">暂未检测到停靠线路</string>
+    <string name="add_lines_first_hint">请先搜索添加常用线路</string>
+    <string name="add_lines_first_sub">添加后附近雷达将自动追踪实时到站</string>
+    <string name="passing_lines_count">停靠 %1$d 条常用线路</string>
+    <string name="switch_platform">切换站台</string>
+
+    <!-- 线路卡片 -->
+    <string name="boarding_station">上车站：%1$s</string>
+    <string name="stops_away">还有 %1$d 站</string>
+    <string name="about_minutes">约 %1$d 分钟</string>
+    <string name="arriving_soon">即将到站</string>
+    <string name="add_label">添加标签</string>
+    <string name="delete">删除</string>
+    <string name="delete_line_title">删除线路</string>
+    <string name="delete_line_message">确定要删除 %1$s 吗？</string>
+    <string name="label_dialog_title">设置线路标签</string>
+    <string name="clear_label">清除标签</string>
+    <string name="cancel">取消</string>
+
+    <!-- 标签 -->
+    <string name="label_work">上班</string>
+    <string name="label_home">回家</string>
+    <string name="label_school">学校</string>
+    <string name="label_shopping">购物</string>
+    <string name="label_hospital">就医</string>
+    <string name="label_custom">自定义</string>
+
+    <!-- 进度与状态 -->
+    <string name="no_real_time_data">暂无实时数据</string>
+    <string name="within_one_minute">1 分钟以内</string>
+    <string name="minutes">%1$d 分钟</string>
+    <string name="data_cached">数据可能已过期</string>
+    <string name="pull_to_refresh">下拉刷新</string>
+
+    <!-- 添加线路 -->
+    <string name="add_line_title">添加公交线路</string>
+    <string name="back">返回</string>
+    <string name="search_placeholder">输入线路号，如 1、33、375</string>
+    <string name="search">搜索</string>
+    <string name="search_results">搜索结果 (%1$d)</string>
+    <string name="no_results">未找到相关线路，请换个关键词试试</string>
+    <string name="select_boarding_station">选择您的上车站</string>
+    <string name="search_again">重新搜索</string>
+    <string name="confirm_add">确认添加</string>
+    <string name="go_back">返回上一步</string>
+    <string name="line">线路</string>
+    <string name="direction">方向</string>
+    <string name="start">起点</string>
+    <string name="end">终点</string>
+    <string name="boarding_stop">上车站</string>
+
+    <!-- 出行习惯与记忆洞察 -->
+    <string name="habit_insights_title">通勤记忆与习惯洞察</string>
+    <string name="habit_insights_subtitle">100% 端侧隐私安全 · 零云端上传</string>
+    <string name="habit_learning_title">正在自主学习您的日常通勤习惯</string>
+    <string name="habit_learning_subtitle">根据时间与地理位置无感推算目的地，开门即见下一班车，无需手动查找。</string>
+    <string name="monthly_overview">本月通勤数据概览</string>
+    <string name="stat_trips_tracked">已记录行程</string>
+    <string name="stat_time_saved">节省盲等时间</string>
+    <string name="stat_trips_unit">%1$d次</string>
+    <string name="stat_time_unit">~%1$d分</string>
+    <string name="stat_top_station">常驻出发站</string>
+    <string name="stat_top_line">最高频线路</string>
+    <string name="learned_routines_count">已识别的固定通勤规律 (%1$d)</string>
+    <string name="confidence_score">%1$d%% 置信度</string>
+    <string name="preferred_lines">优选线路:</string>
+    <string name="typical_time">典型时段: %1$s (已记录%2$d次)</string>
+    <string name="delete_routine">删除此规律</string>
+    <string name="privacy_title">端侧数据自主权</string>
+    <string name="privacy_description">所有行为时间切片与地理特征均储存在本机的 SQLite 数据库中，从未也不会上传至任何服务器。您可以随时重置所有规律。</string>
+    <string name="clear_habits_button">重置与清空所有已学习习惯</string>
+    <string name="clear_habits_dialog_title">清空全部学习数据？</string>
+    <string name="clear_habits_dialog_message">将删除本地行为日志并重置所有已学习的通勤规律，重新开始记录。</string>
+    <string name="confirm_clear">确认清空</string>
+    <string name="routine_accumulating_title">正在累积出行规律数据</string>
+    <string name="routine_accumulating_subtitle">在工作日或周末使用几次后，系统将全自动提取您的早晚高峰专属线路与时间节省指标。</string>
+
+    <!-- 通勤走廊 -->
+    <string name="commute_corridor_title">通勤走廊</string>
+    <string name="estimated_arrival_format">预计 %1$s 抵达目的地 (含到达后步行%2$d分钟)</string>
+    <string name="switch_corridor">切换走廊</string>
+    <string name="earliest_arrival">最早到达</string>
+
+    <!-- 设置 -->
+    <string name="data_and_privacy">数据与隐私</string>
+    <string name="use_location">使用位置信息</string>
+    <string name="use_location_subtitle">用于自动判断通勤方向，匹配对应线路</string>
+    <string name="record_usage_habits">记录使用习惯</string>
+    <string name="record_usage_habits_subtitle">用于智能调整线路顺序，优先显示常坐线路</string>
+    <string name="data_management">数据管理</string>
+    <string name="clear_learning_data">清除全部学习数据</string>
+    <string name="clear_learning_data_subtitle">删除记录的使用习惯和偏好数据</string>
+    <string name="about">关于</string>
+    <string name="data_note">数据说明</string>
+    <string name="data_note_subtitle">所有数据仅保存在您的设备本地，不上传任何服务器。\n\n实时公交数据来自北京实时公交官方开放接口。</string>
+    <string name="version">版本</string>
+    <string name="footer_text">公交助手\n本地存储，保护隐私</string>
+    <string name="clear_data_title">清除学习数据</string>
+    <string name="clear_data_message">确定要清除所有使用习惯数据吗？\n清除后将重新学习您的出行习惯。</string>
+    <string name="clear">清除</string>
+</resources>

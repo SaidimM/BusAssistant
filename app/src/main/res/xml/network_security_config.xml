@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 默认全局禁止所有明文 HTTP 通信，保障传输安全 -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- 仅针对北京市交通信息中心官方 API 域名精准开启明文通道 -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">transapp.btic.org.cn</domain>
+        <domain includeSubdomains="true">btic.org.cn</domain>
+    </domain-config>
+
+    <!-- 调试环境配置 -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>

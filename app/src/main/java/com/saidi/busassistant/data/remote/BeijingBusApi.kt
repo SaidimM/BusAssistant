@@ -1,58 +1,81 @@
 package com.saidi.busassistant.data.remote
 
-import com.saidi.busassistant.data.remote.dto.BusRealTimeResponse
-import com.saidi.busassistant.data.remote.dto.LineSearchResponse
+import com.saidi.busassistant.data.remote.dto.BusRealTimeRawResponse
+import com.saidi.busassistant.data.remote.dto.CheckUpdateResponse
+import com.saidi.busassistant.data.remote.dto.LineDetailResponse
 import retrofit2.Response
 import retrofit2.http.GET
+import retrofit2.http.Headers
 import retrofit2.http.Query
 
 /**
- * 北京实时公交 API 接口
- *
- * 注意：此接口基于北京公交官方开放接口设计
- * 实际使用时需要替换为有效的 API 基础地址和认证信息
- *
- * 开发阶段可使用模拟数据（见 BusRepository 中的 Mock 模式）
+ * Beijing Real-Time Bus Transit API.
+ * Reverse-engineered interface based on leavez/fucking-beijing-bus-api.
  */
 interface BeijingBusApi {
 
     /**
-     * 搜索公交线路
-     * @param keyword 线路号关键词
+     * Retrieves all transit lines in the Beijing network (~2,000+ line variants).
      */
-    @GET("/api/busline/search")
-    suspend fun searchLines(
-        @Query("keyword") keyword: String
-    ): Response<LineSearchResponse>
+    @Headers(
+        "PID: 5",
+        "PLATFORM: ios",
+        "CID: 18d31a75a568b1e9fab8e410d398f981",
+        "TIME: 1539706356",
+        "ABTOKEN: 31d7dae1d869a172f3b66fa14fe274d1",
+        "VID: 6",
+        "IMEI: 9012",
+        "CTYPE: json"
+    )
+    @GET("ssgj/v1.0.0/checkUpdate")
+    suspend fun checkUpdate(
+        @Query("version") version: Int = 1,
+        @Query("city") city: String = "%E5%8C%97%E4%BA%AC",
+        @Query("datatype") dataType: String = "json"
+    ): Response<CheckUpdateResponse>
 
     /**
-     * 获取线路实时数据
-     * @param lineId 线路ID
-     * @param direction 方向（0=上行, 1=下行）
+     * Retrieves detailed route stops, sequences, and GPS coordinates for a line.
+     * @param lineId Unique route ID returned by checkUpdate (e.g. "1001")
      */
-    @GET("/api/bus/realtime")
-    suspend fun getRealTimeData(
-        @Query("line_id") lineId: String,
-        @Query("direction") direction: String
-    ): Response<BusRealTimeResponse>
+    @Headers(
+        "PID: 5",
+        "PLATFORM: ios",
+        "CID: 18d31a75a568b1e9fab8e410d398f981",
+        "TIME: 1540031093",
+        "ABTOKEN: 55750cf92a54b09bd52e23105f7f60aa",
+        "VID: 6",
+        "IMEI: 9012",
+        "CTYPE: json"
+    )
+    @GET("ssgj/v1.0.0/update")
+    suspend fun getLineDetail(
+        @Query("id") lineId: String,
+        @Query("city") city: String = "%E5%8C%97%E4%BA%AC",
+        @Query("datatype") dataType: String = "json"
+    ): Response<LineDetailResponse>
 
     /**
-     * 获取线路站点列表
-     * @param lineId 线路ID
+     * Retrieves live real-time vehicle telemetry and arrival estimates for a station.
+     * @param lineId Target route identifier
+     * @param stationNo Boarding stop sequence number (1-indexed)
+     * @param encrypt Enable RC4 obfuscation (fixed at 1)
      */
-    @GET("/api/busline/stations")
-    suspend fun getLineStations(
-        @Query("line_id") lineId: String
-    ): Response<LineSearchResponse>
+    @GET("ssgj/bus.php")
+    suspend fun getRealTimeBus(
+        @Query("id") lineId: String,
+        @Query("no") stationNo: Int,
+        @Query("encrypt") encrypt: Int = 1,
+        @Query("city") city: String = "%E5%8C%97%E4%BA%AC",
+        @Query("datatype") dataType: String = "json"
+    ): Response<BusRealTimeRawResponse>
 
     companion object {
-        // 北京公交 API 基础地址（示例，需替换为实际地址）
-        const val BASE_URL = "https://api.beijingbus.com/v1/"
+        // Official municipal transit telemetry endpoint (HTTP)
+        const val BASE_URL = "http://transapp.btic.org.cn:8512/"
 
-        // 请求间隔限制（毫秒）
-        const val MIN_REQUEST_INTERVAL = 15000L // 15秒
-
-        // 缓存有效期（毫秒）
-        const val CACHE_VALID_DURATION = 30000L // 30秒
+        // Request throttling and caching parameters
+        const val MIN_REQUEST_INTERVAL = 5000L // 5 seconds
+        const val CACHE_VALID_DURATION = 15000L // 15 seconds
     }
 }

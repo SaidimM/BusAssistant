@@ -1,5 +1,8 @@
 package com.saidi.busassistant.ui.home
 
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -10,6 +13,7 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DirectionsBus
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
@@ -29,6 +33,7 @@ import com.saidi.busassistant.data.local.entity.BusLineEntity
 import com.saidi.busassistant.ui.components.BusLineCard
 import com.saidi.busassistant.ui.components.CommuteCorridorCard
 import com.saidi.busassistant.ui.components.LabelSelectionDialog
+import com.saidi.busassistant.ui.components.NearbyStationBoard
 import com.saidi.busassistant.ui.theme.BluePrimary
 import com.saidi.busassistant.ui.theme.GrayText
 import com.saidi.busassistant.ui.viewmodel.HomeViewModel
@@ -36,21 +41,43 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * 首页 —— 实时公交看板（支持通勤走廊多线极速聚合）
+ * Home Screen - Real-time transit departure dashboard and nearby station radar.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun HomeScreen(
     onAddLineClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onHabitInsightsClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val corridorState by viewModel.corridorState.collectAsState()
+    val nearbyStationState by viewModel.nearbyStationState.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val realTimeDataMap by viewModel.realTimeDataMap.collectAsState()
 
     var selectedLineForLabel by remember { mutableStateOf<BusLineEntity?>(null) }
+
+    // Request runtime location permissions
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        ) {
+            viewModel.refreshNearbyStations()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        locationPermissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+        )
+    }
 
     val pullRefreshState = rememberPullRefreshState(
         refreshing = isRefreshing,
@@ -75,11 +102,18 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onHabitInsightsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Psychology,
+                            contentDescription = stringResource(R.string.habit_insights_title),
+                            tint = BluePrimary
+                        )
+                    }
                     IconButton(onClick = { viewModel.refresh() }) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = stringResource(R.string.refresh),
-                            tint = BluePrimary
+                            tint = GrayText
                         )
                     }
                     IconButton(onClick = onSettingsClick) {
@@ -115,57 +149,53 @@ fun HomeScreen(
                 .padding(paddingValues)
                 .pullRefresh(pullRefreshState)
         ) {
-            if (uiState.lines.isEmpty() && corridorState.isEmpty) {
-                // 空状态
-                EmptyState(onAddLineClick = onAddLineClick)
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    // ========== 顶部：智能通勤走廊看板 ==========
-                    if (!corridorState.isEmpty && corridorState.corridor != null) {
-                        item(key = "commute_corridor") {
-                            CommuteCorridorCard(
-                                corridorState = corridorState,
-                                onSwitchCorridor = { viewModel.switchToNextCorridor() }
-                            )
-                        }
-
-                        item(key = "section_header") {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp, bottom = 2.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "全部独立线路 (${uiState.lines.size})",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                Text(
-                                    text = "30秒自动刷新",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = GrayText
-                                )
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // ========== 1. Nearby Station Radar Card (Zero-Interaction) ==========
+                if (nearbyStationState.activeStation != null) {
+                    item(key = "nearby_station_radar") {
+                        NearbyStationBoard(
+                            state = nearbyStationState,
+                            onToggleDirection = { viewModel.toggleNearbyDirection() },
+                            onSaveFavoriteLine = { lineNumber ->
+                                viewModel.saveNearbyLineAsFavorite(lineNumber)
                             }
-                        }
-                    } else {
-                        item {
+                        )
+                    }
+                }
+
+                // ========== 2. Commute Corridor Card ==========
+                if (!corridorState.isEmpty && corridorState.corridor != null) {
+                    item(key = "commute_corridor") {
+                        CommuteCorridorCard(
+                            corridorState = corridorState,
+                            onSwitchCorridor = { viewModel.switchToNextCorridor() }
+                        )
+                    }
+                }
+
+                // ========== 3. Favorite Bus Lines List ==========
+                if (uiState.lines.isNotEmpty()) {
+                    item(key = "section_header_favorite_lines") {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp, bottom = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(
                                 text = stringResource(R.string.lines_added_count, uiState.lines.size),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = GrayText,
-                                modifier = Modifier.padding(bottom = 4.dp)
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
-                    // ========== 单条线路列表 ==========
                     items(
                         items = uiState.lines,
                         key = { it.id }
@@ -180,11 +210,16 @@ fun HomeScreen(
                             onCardClick = { viewModel.recordLineViewed(line) }
                         )
                     }
-
-                    // 底部留白（避免 FAB 遮挡）
+                } else if (nearbyStationState.activeStation == null && corridorState.isEmpty) {
+                    // Empty state
                     item {
-                        Spacer(modifier = Modifier.height(80.dp))
+                        EmptyState(onAddLineClick = onAddLineClick)
                     }
+                }
+
+                // Bottom spacer for FAB
+                item {
+                    Spacer(modifier = Modifier.height(80.dp))
                 }
             }
 
@@ -199,7 +234,7 @@ fun HomeScreen(
         }
     }
 
-    // 标签选择对话框
+    // Label selection dialog
     selectedLineForLabel?.let { line ->
         LabelSelectionDialog(
             currentLabel = line.userLabel,
@@ -213,7 +248,7 @@ fun HomeScreen(
 }
 
 /**
- * 空状态页面
+ * Empty state screen.
  */
 @Composable
 private fun EmptyState(
@@ -221,7 +256,7 @@ private fun EmptyState(
 ) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -278,7 +313,7 @@ private fun EmptyState(
 }
 
 /**
- * 获取当前时间展示文本
+ * Formats current timestamp for header display.
  */
 private fun getCurrentTimeText(): String {
     val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())

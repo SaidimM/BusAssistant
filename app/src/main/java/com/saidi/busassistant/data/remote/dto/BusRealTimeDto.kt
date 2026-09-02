@@ -3,8 +3,7 @@ package com.saidi.busassistant.data.remote.dto
 import com.google.gson.annotations.SerializedName
 
 /**
- * 实时公交数据 DTO
- * 对接北京公交 API 的返回格式
+ * Real-time bus domain DTO models.
  */
 data class BusRealTimeResponse(
     @SerializedName("status")
@@ -41,15 +40,15 @@ data class BusInfo(
     @SerializedName("lon")
     val longitude: Double,
     @SerializedName("station_index")
-    val stationIndex: Int,            // 车辆当前所在站点索引
+    val stationIndex: Int,            // Current station index
     @SerializedName("next_station_index")
-    val nextStationIndex: Int,        // 下一站索引
+    val nextStationIndex: Int,        // Next upcoming station index
     @SerializedName("distance_to_next")
-    val distanceToNext: Int,          // 距下一站距离(米)
+    val distanceToNext: Int,          // Distance to next station in meters
     @SerializedName("arrival_time_estimate")
-    val arrivalTimeEstimate: Int?,    // 预计到站时间(秒)
+    val arrivalTimeEstimate: Int?,    // Estimated arrival duration in seconds
     @SerializedName("is_arriving")
-    val isArriving: Boolean           // 是否即将到站
+    val isArriving: Boolean           // Flag indicating imminent arrival
 )
 
 data class StationInfo(
@@ -64,7 +63,7 @@ data class StationInfo(
 )
 
 /**
- * 线路搜索 DTO
+ * Line search response DTO.
  */
 data class LineSearchResponse(
     @SerializedName("status")

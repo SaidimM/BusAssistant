@@ -3,31 +3,38 @@ package com.saidi.busassistant.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.ColumnInfo
+import androidx.room.Index
 
 /**
- * 用户行为日志 —— 用于习惯学习
- * 仅在用户打开App并查看线路时记录
+ * User behavior and interaction log entity.
+ * Passively recorded on-device to learn commute routines.
  */
-@Entity(tableName = "behavior_logs")
+@Entity(
+    tableName = "behavior_logs",
+    indices = [
+        Index(value = ["weekday", "hour", "location_zone"]),
+        Index(value = ["created_at"])
+    ]
+)
 data class BehaviorLogEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
 
-    @ColumnInfo(name = "timestamp")
-    val timestamp: Long = System.currentTimeMillis(),
-
     @ColumnInfo(name = "weekday")
-    val weekday: Int,                 // 1=周一, 7=周日
+    val weekday: Int,                  // 1=Mon, 2=Tue, ..., 7=Sun
 
     @ColumnInfo(name = "hour")
-    val hour: Int,                    // 0-23
+    val hour: Int,                     // 0-23
 
     @ColumnInfo(name = "location_zone")
-    val locationZone: String,         // "home" | "company" | "other"
+    val locationZone: String,          // Coarse geographic cluster ID
 
     @ColumnInfo(name = "viewed_bus_line_id")
-    val viewedBusLineId: Long,        // 查看的线路ID
+    val viewedBusLineId: Long,         // Associated bus line database ID
 
     @ColumnInfo(name = "viewed_bus_line_number")
-    val viewedBusLineNumber: String   // 查看的线路号（冗余，便于统计）
+    val viewedBusLineNumber: String,   // Route number, e.g. "375"
+
+    @ColumnInfo(name = "created_at")
+    val createdAt: Long = System.currentTimeMillis()
 )

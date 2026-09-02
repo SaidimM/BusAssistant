@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.saidi.busassistant.data.local.LineFrequencyResult
 import com.saidi.busassistant.data.local.entity.BusLineEntity
 import com.saidi.busassistant.data.local.entity.CommuteCorridorEntity
+import com.saidi.busassistant.data.model.*
 import com.saidi.busassistant.data.remote.dto.BusInfo
 import com.saidi.busassistant.data.remote.dto.RealTimeData
 import com.saidi.busassistant.data.repository.BusRepository
@@ -20,8 +21,8 @@ import java.util.Locale
 import javax.inject.Inject
 
 /**
- * 通用首页 ViewModel
- * 管理实时看板数据、自学习行程推测、地理围栏辅助与多线走廊极速聚合
+ * Home Screen ViewModel.
+ * Manages nearby station radar, commute corridors, habit insights, and auto-refresh loops.
  */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
@@ -43,15 +44,23 @@ class HomeViewModel @Inject constructor(
     private val _errorMessage = MutableSharedFlow<String>()
     val errorMessage: SharedFlow<String> = _errorMessage.asSharedFlow()
 
-    // 实时数据缓存: lineId -> RealTimeData
+    // Real-time telemetry map: lineId -> RealTimeDataDisplay
     private val _realTimeDataMap = MutableStateFlow<Map<Long, RealTimeDataDisplay>>(emptyMap())
     val realTimeDataMap: StateFlow<Map<Long, RealTimeDataDisplay>> = _realTimeDataMap.asStateFlow()
 
-    // 通勤走廊状态
+    // Commute corridor UI state
     private val _corridorState = MutableStateFlow(CommuteCorridorUiState())
     val corridorState: StateFlow<CommuteCorridorUiState> = _corridorState.asStateFlow()
 
-    // 用户手动选择的走廊 ID（为空时依据历史习惯自适应预估）
+    // Nearby station radar state (Zero-Interaction)
+    private val _nearbyStationState = MutableStateFlow(NearbyStationUiState())
+    val nearbyStationState: StateFlow<NearbyStationUiState> = _nearbyStationState.asStateFlow()
+
+    // Habit insights and on-device commute memory state
+    private val _habitInsightsState = MutableStateFlow(HabitInsightsUiState())
+    val habitInsightsState: StateFlow<HabitInsightsUiState> = _habitInsightsState.asStateFlow()
+
+    // Manually selected corridor ID (null for auto-inference)
     private val _selectedCorridorId = MutableStateFlow<Long?>(null)
 
     private var refreshJob: Job? = null
@@ -61,15 +70,137 @@ class HomeViewModel @Inject constructor(
 
     init {
         loadCorridorsAndLines()
+        refreshNearbyStations()
+        loadHabitInsights()
         startAutoRefresh()
     }
 
-    // ========== 线路与自适应走廊管理 ==========
+    // ========== Nearby Station Radar ==========
+
+    /**
+     * Resolves nearest physical bus stop and queries live departures for all passing lines.
+     */
+    fun refreshNearbyStations() {
+        viewModelScope.launch {
+            _nearbyStationState.update { it.copy(isLoading = true) }
+
+            val hasPerm = locationContextManager.hasLocationPermission()
+            val location = locationContextManager.getLastKnownLocation()
+
+            val lat = location?.latitude ?: 39.9982
+            val lon = location?.longitude ?: 116.4741
+
+            val (nearestStation, distance) = repository.findNearestStation(lat, lon)
+            val distanceMeters = distance.toInt().coerceAtLeast(20)
+            val walkingMinutes = locationContextManager.calculateWalkingMinutes(distanceMeters)
+
+            val arrivals = repository.getNearbyStationArrivals(nearestStation)
+            val fastest = arrivals.firstOrNull()
+
+            val now = Calendar.getInstance()
+            val hour = now.get(Calendar.HOUR_OF_DAY)
+            val isWeekday = now.get(Calendar.DAY_OF_WEEK) in Calendar.MONDAY..Calendar.FRIDAY
+
+            val habitSummary = when {
+                isWeekday && hour in 7..9 -> "🌅 Habit match: Morning Commute · ${fastest?.lineNumber ?: "Line"} recommended"
+                isWeekday && hour in 17..20 -> "🌇 Habit match: Evening Commute · ${fastest?.lineNumber ?: "Line"} recommended"
+                else -> null
+            }
+
+            _nearbyStationState.value = NearbyStationUiState(
+                activeStation = nearestStation,
+                distanceMeters = distanceMeters,
+                walkingMinutes = walkingMinutes,
+                isOppositeDirection = nearestStation.directionText.contains("Inbound"),
+                arrivals = arrivals,
+                fastestArrival = fastest,
+                isLoading = false,
+                hasLocationPermission = hasPerm,
+                detectedHabitSummary = habitSummary
+            )
+        }
+    }
+
+    /**
+     * Toggles platform direction (e.g. Northbound ➔ Southbound).
+     */
+    fun toggleNearbyDirection() {
+        val currentStation = _nearbyStationState.value.activeStation ?: return
+        val oppId = currentStation.oppositeStationId ?: return
+        val oppositeStation = repository.findStationById(oppId) ?: return
+
+        viewModelScope.launch {
+            _nearbyStationState.update { it.copy(isLoading = true) }
+            val arrivals = repository.getNearbyStationArrivals(oppositeStation)
+            val fastest = arrivals.firstOrNull()
+
+            _nearbyStationState.update {
+                it.copy(
+                    activeStation = oppositeStation,
+                    isOppositeDirection = oppositeStation.directionText.contains("Inbound"),
+                    arrivals = arrivals,
+                    fastestArrival = fastest,
+                    isLoading = false
+                )
+            }
+        }
+    }
+
+    /**
+     * Pins a nearby line directly to favorites.
+     */
+    fun saveNearbyLineAsFavorite(lineNumber: String) {
+        val currentStation = _nearbyStationState.value.activeStation?.stationName ?: "Station"
+        viewModelScope.launch {
+            val exists = _uiState.value.lines.any { it.lineNumber == lineNumber }
+            if (!exists) {
+                val order = repository.getLineCount()
+                val line = BusLineEntity(
+                    lineNumber = lineNumber,
+                    lineName = "Line $lineNumber",
+                    direction = "Standard",
+                    startStation = currentStation,
+                    endStation = "Terminal",
+                    boardingStationIndex = 8,
+                    userBoardingStation = currentStation,
+                    userAlightingStation = "Destination",
+                    userLabel = "work",
+                    displayOrder = order
+                )
+                repository.addLine(line)
+                recordLineViewed(line)
+            }
+        }
+    }
+
+    // ========== Habit Insights Engine ==========
+
+    fun loadHabitInsights() {
+        viewModelScope.launch {
+            _habitInsightsState.update { it.copy(isLoading = true) }
+            val routines = repository.getLearnedCommuteRoutines()
+            val stats = repository.getCommuteStatistics()
+
+            _habitInsightsState.value = HabitInsightsUiState(
+                learnedRoutines = routines,
+                statsSummary = stats,
+                isLoading = false
+            )
+        }
+    }
+
+    fun deleteLearnedRoutine(routineId: String) {
+        viewModelScope.launch {
+            repository.deleteLearnedRoutine(routineId)
+            loadHabitInsights()
+        }
+    }
+
+    // ========== Lines & Corridors Management ==========
 
     private fun loadCorridorsAndLines() {
         viewModelScope.launch {
             repository.getAllLines().collect { lines ->
-                // 自动同步基于同站点的通用通勤走廊
                 repository.syncCorridorsFromLines(lines)
 
                 val sortedLines = sortLinesIntelligently(lines)
@@ -93,10 +224,6 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 基于时间窗口、地理围栏与行为日志的通用行程预估：
-     * 自动推断当前时间用户最可能使用的走廊
-     */
     private suspend fun inferBestCorridor(corridors: List<CommuteCorridorEntity>): CommuteCorridorEntity? {
         if (corridors.isEmpty()) return null
         if (corridors.size == 1) return corridors.first()
@@ -117,7 +244,6 @@ class HomeViewModel @Inject constructor(
         val hour = now.get(Calendar.HOUR_OF_DAY)
         val zone = getCurrentLocationZone()
 
-        // 优先使用历史学习行为数据推断
         val topLines = repository.getTopLinesByContext(weekday, hour, zone, limit = 5)
         if (topLines.isNotEmpty()) {
             val topNumbers = topLines.map { it.lineNumber }.toSet()
@@ -128,7 +254,6 @@ class HomeViewModel @Inject constructor(
             if (matchedCorridor != null) return matchedCorridor
         }
 
-        // 无特定历史时，按默认顺序返回
         return corridors.firstOrNull()
     }
 
@@ -186,7 +311,7 @@ class HomeViewModel @Inject constructor(
             }
             val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
             val formattedTime = timeFormat.format(calendar.time)
-            "预计 $formattedTime 抵达目的地 (含到达后步行${activeCorridor.walkingMinutesAfter}分钟)"
+            "Est. $formattedTime arrival (incl. ${activeCorridor.walkingMinutesAfter} min walk)"
         }
 
         return CommuteCorridorUiState(
@@ -236,12 +361,14 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    // ========== 实时数据刷新 ==========
+    // ========== Real-Time Refresh Loop ==========
 
     fun refresh() {
         refreshJob?.cancel()
         refreshJob = viewModelScope.launch {
             _isRefreshing.value = true
+            refreshNearbyStations()
+            loadHabitInsights()
             val lines = _uiState.value.lines
             if (lines.isNotEmpty()) {
                 refreshRealTimeData(lines)
@@ -293,7 +420,8 @@ class HomeViewModel @Inject constructor(
         autoRefreshJob?.cancel()
         autoRefreshJob = viewModelScope.launch {
             while (true) {
-                delay(20000) // 20秒自动刷新
+                delay(20000) // 20-second foreground refresh loop
+                refreshNearbyStations()
                 val lines = _uiState.value.lines
                 if (lines.isNotEmpty()) {
                     refreshRealTimeData(lines)
@@ -370,6 +498,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             repository.clearAllBehaviorLogs()
             _selectedCorridorId.value = null
+            loadHabitInsights()
         }
     }
 

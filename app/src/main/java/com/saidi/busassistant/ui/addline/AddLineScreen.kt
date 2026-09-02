@@ -39,7 +39,7 @@ import androidx.lifecycle.viewModelScope
 import javax.inject.Inject
 
 /**
- * 添加线路页面
+ * Add Bus Line Flow Screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,17 +98,10 @@ fun AddLineScreen(
             }
         }
     }
-
-    // 错误提示
-    if (uiState.error != null) {
-        LaunchedEffect(uiState.error) {
-            // 可以在这里显示 Snackbar
-        }
-    }
 }
 
 /**
- * 搜索步骤
+ * Step 1: Search route keyword.
  */
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -123,7 +116,7 @@ private fun SearchStep(
     val keyboardController = LocalSoftwareKeyboardController.current
 
     Column {
-        // 搜索框
+        // Search Input Field
         OutlinedTextField(
             value = keyword,
             onValueChange = onKeywordChange,
@@ -153,7 +146,7 @@ private fun SearchStep(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 搜索按钮
+        // Search Action Button
         Button(
             onClick = {
                 keyboardController?.hide()
@@ -179,7 +172,7 @@ private fun SearchStep(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 搜索结果
+        // Search Results List
         if (results.isNotEmpty()) {
             Text(
                 text = stringResource(R.string.search_results, results.size),
@@ -199,7 +192,6 @@ private fun SearchStep(
                 }
             }
         } else if (!isSearching && keyword.isNotEmpty()) {
-            // 无结果
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -217,7 +209,7 @@ private fun SearchStep(
 }
 
 /**
- * 搜索结果项
+ * Line search result list item.
  */
 @Composable
 private fun LineSearchResultItem(
@@ -269,7 +261,7 @@ private fun LineSearchResultItem(
 }
 
 /**
- * 选择上车站点步骤
+ * Step 2: Select Boarding Stop.
  */
 @Composable
 private fun StationSelectStep(
@@ -278,7 +270,6 @@ private fun StationSelectStep(
     onBack: () -> Unit
 ) {
     Column {
-        // 线路信息摘要
         Surface(
             shape = RoundedCornerShape(12.dp),
             color = BluePrimary.copy(alpha = 0.05f),
@@ -344,7 +335,7 @@ private fun StationSelectStep(
 }
 
 /**
- * 站点项
+ * Station list item.
  */
 @Composable
 private fun StationItem(
@@ -365,7 +356,6 @@ private fun StationItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // 站点序号
             Surface(
                 shape = RoundedCornerShape(8.dp),
                 color = BluePrimary.copy(alpha = 0.1f)
@@ -387,7 +377,7 @@ private fun StationItem(
 }
 
 /**
- * 确认步骤
+ * Step 3: Confirm and save line.
  */
 @Composable
 private fun ConfirmStep(
@@ -408,7 +398,6 @@ private fun ConfirmStep(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 信息卡片
             Card(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
@@ -434,7 +423,6 @@ private fun ConfirmStep(
             }
         }
 
-        // 底部按钮
         Column {
             Button(
                 onClick = onConfirm,

@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
@@ -21,11 +20,8 @@ import com.saidi.busassistant.ui.theme.*
 import com.saidi.busassistant.ui.viewmodel.ClosestBusInfo
 
 /**
- * 公交车辆位置进度条
- * 无地图，纯 Canvas 绘制
- *
- * @param closestBus 最近车辆信息
- * @param modifier 修饰符
+ * Bus Progress Bar Component.
+ * Pure Canvas-based arrival line progress without map dependencies.
  */
 @Composable
 fun BusProgressBar(
@@ -33,7 +29,6 @@ fun BusProgressBar(
     modifier: Modifier = Modifier
 ) {
     if (closestBus == null) {
-        // 无车辆数据时显示灰色占位
         Box(
             modifier = modifier
                 .fillMaxWidth()
@@ -64,7 +59,6 @@ fun BusProgressBar(
     )
 
     val trackColor = GrayLight
-    val backgroundColor = MaterialTheme.colorScheme.surface
 
     Box(
         modifier = modifier
@@ -80,7 +74,7 @@ fun BusProgressBar(
             val startX = 0f
             val endX = canvasWidth
 
-            // 1. 绘制背景轨道
+            // 1. Draw background track
             drawRoundRect(
                 color = trackColor,
                 topLeft = Offset(startX, barY),
@@ -88,7 +82,7 @@ fun BusProgressBar(
                 cornerRadius = androidx.compose.ui.geometry.CornerRadius(barHeight / 2, barHeight / 2)
             )
 
-            // 2. 绘制进度（车辆已行驶的部分）
+            // 2. Draw active transit progress
             if (animatedProgress > 0) {
                 drawRoundRect(
                     color = busColor.copy(alpha = 0.3f),
@@ -98,18 +92,18 @@ fun BusProgressBar(
                 )
             }
 
-            // 3. 绘制站点圆点（简化版：起点、用户站、终点）
+            // 3. Draw station nodes (Origin, User Boarding Stop, Terminal)
             val dotRadius = 5.dp.toPx()
             val dotY = canvasHeight / 2
 
-            // 起点
+            // Origin
             drawCircle(
                 color = GrayText.copy(alpha = 0.5f),
                 radius = dotRadius,
                 center = Offset(startX + dotRadius, dotY)
             )
 
-            // 用户站点（ boarding station ）
+            // User boarding stop
             val userStationX = startX + (endX - startX) * 0.7f
             drawCircle(
                 color = if (closestBus.isArriving) busColor else BluePrimary,
@@ -117,30 +111,27 @@ fun BusProgressBar(
                 center = Offset(userStationX, dotY)
             )
 
-            // 终点
+            // Terminal
             drawCircle(
                 color = GrayText.copy(alpha = 0.5f),
                 radius = dotRadius,
                 center = Offset(endX - dotRadius, dotY)
             )
 
-            // 4. 绘制车辆位置（动画小公交图标）
+            // 4. Draw vehicle position indicator
             val busX = startX + (endX - startX) * animatedProgress
             val busY = canvasHeight / 2
 
-            // 车辆外圈
             drawCircle(
                 color = busColor,
                 radius = 10.dp.toPx(),
                 center = Offset(busX, busY)
             )
-            // 车辆内圈
             drawCircle(
                 color = Color.White,
                 radius = 7.dp.toPx(),
                 center = Offset(busX, busY)
             )
-            // 车辆核心点
             drawCircle(
                 color = busColor,
                 radius = 4.dp.toPx(),
@@ -148,7 +139,7 @@ fun BusProgressBar(
             )
         }
 
-        // 时间标签
+        // Time countdown label
         Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -170,7 +161,7 @@ fun BusProgressBar(
 }
 
 /**
- * 简化的站点进度指示器（纯圆点版本）
+ * Simplified dot-based station progress indicator.
  */
 @Composable
 fun DotProgressIndicator(
@@ -200,5 +191,3 @@ fun DotProgressIndicator(
         }
     }
 }
-
-

@@ -10,6 +10,9 @@ interface BusLineDao {
     @Query("SELECT * FROM bus_lines ORDER BY display_order ASC, created_at ASC")
     fun getAllLines(): Flow<List<BusLineEntity>>
 
+    @Query("SELECT * FROM bus_lines ORDER BY display_order ASC, created_at ASC")
+    suspend fun getAllLinesSync(): List<BusLineEntity>
+
     @Query("SELECT * FROM bus_lines WHERE id = :id")
     suspend fun getLineById(id: Long): BusLineEntity?
 
