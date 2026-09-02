@@ -100,20 +100,20 @@ BusAssistant/
 
 ## 🗺️ Roadmap
 
-### Phase 1: MVP Core (Current)
+### Phase 1: MVP Core (Completed)
 - [x] Lightweight, map-free Jetpack Compose dashboard (<500ms launch)
 - [x] Multi-line real-time arrival cards with progress indicators
 - [x] Local Room database for favorite lines and tags (Work, Home, School)
-- [x] Simulated real-time bus telemetry engine (Mock Beijing Bus data)
+- [x] Simulated real-time bus telemetry engine (Algorithmic simulation)
 - [x] Context logging foundation (Day of week, hour, frequency sorting)
 
-### Phase 2: Route Corridors & Smart Estimation (In Progress)
-- [ ] **Route Corridor Grouping:** Group multiple bus lines serving the same origin-destination pair into one unified card.
-- [ ] **Geofence-Based Commute Triggering:** Auto-switch direction (Apartment ➔ Work vs. Work ➔ Apartment) based on current geofence.
-- [ ] **Smart Arrival Recommendation:** Suggest whether to catch the immediate bus or wait for a faster/less crowded line.
+### Phase 2: Route Corridors & Smart Estimation (Completed)
+- [x] **Route Corridor Auto-Clustering:** Automatically groups multiple bus lines serving the same origin-destination corridor into a single glanceable card.
+- [x] **Geofence & Location-Aware Context Engine:** Automatic location zone logging & geofence trigger support via LocationContextManager.
+- [x] **Smart Arrival Recommendation:** Highlights fastest approaching line with instant action badges ("首选 / 即将进站").
 
-### Phase 3: Zero-Tap Ecosystem
-- [ ] **Android Home Screen AppWidget (Glance):** View live bus countdowns straight from your home screen.
+### Phase 3: Zero-Tap Ecosystem (In Progress)
+- [x] **Android Home Screen AppWidget:** Native home screen widget with live multi-line countdowns, route header, and one-tap refresh.
 - [ ] **Lock Screen Persistent Notification:** Auto-activates 15 minutes before typical commute times.
 - [ ] **WearOS / Smartwatch Companion:** Check bus ETAs on your wrist while walking to the station.
 - [ ] **GTFS-RT & Open Transit Integration:** Support standard city transit real-time feeds.

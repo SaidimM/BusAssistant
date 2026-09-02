@@ -8,6 +8,7 @@ import com.saidi.busassistant.data.local.entity.CommuteCorridorEntity
 import com.saidi.busassistant.data.remote.dto.BusInfo
 import com.saidi.busassistant.data.remote.dto.RealTimeData
 import com.saidi.busassistant.data.repository.BusRepository
+import com.saidi.busassistant.util.LocationContextManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -20,11 +21,12 @@ import javax.inject.Inject
 
 /**
  * 通用首页 ViewModel
- * 管理实时看板数据、自学习行程推测、多线走廊极速聚合
+ * 管理实时看板数据、自学习行程推测、地理围栏辅助与多线走廊极速聚合
  */
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: BusRepository
+    private val repository: BusRepository,
+    private val locationContextManager: LocationContextManager
 ) : ViewModel() {
 
     // ========== State ==========
@@ -92,7 +94,7 @@ class HomeViewModel @Inject constructor(
     }
 
     /**
-     * 基于时间窗口与行为日志的通用行程预估：
+     * 基于时间窗口、地理围栏与行为日志的通用行程预估：
      * 自动推断当前时间用户最可能使用的走廊
      */
     private suspend fun inferBestCorridor(corridors: List<CommuteCorridorEntity>): CommuteCorridorEntity? {
@@ -113,12 +115,12 @@ class HomeViewModel @Inject constructor(
             }
         }
         val hour = now.get(Calendar.HOUR_OF_DAY)
+        val zone = getCurrentLocationZone()
 
-        // 查询当前时段最常查看的线路
-        val topLines = repository.getTopLinesByContext(weekday, hour, "other", limit = 5)
+        // 优先使用历史学习行为数据推断
+        val topLines = repository.getTopLinesByContext(weekday, hour, zone, limit = 5)
         if (topLines.isNotEmpty()) {
             val topNumbers = topLines.map { it.lineNumber }.toSet()
-            // 匹配包含该高频线路的走廊
             val matchedCorridor = corridors.maxByOrNull { c ->
                 val lineList = c.lineNumbers.split(",").map { it.trim() }
                 lineList.count { it in topNumbers }
@@ -126,7 +128,7 @@ class HomeViewModel @Inject constructor(
             if (matchedCorridor != null) return matchedCorridor
         }
 
-        // 默认按 displayOrder 或列表首项
+        // 无特定历史时，按默认顺序返回
         return corridors.firstOrNull()
     }
 
@@ -300,6 +302,15 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun getCurrentLocationZone(): String {
+        return if (locationContextManager.hasLocationPermission()) {
+            val loc = locationContextManager.getLastKnownLocation()
+            if (loc != null) {
+                "zone_${(loc.latitude * 100).toInt()}_${(loc.longitude * 100).toInt()}"
+            } else "other"
+        } else "other"
+    }
+
     private suspend fun sortLinesIntelligently(lines: List<BusLineEntity>): List<BusLineEntity> {
         if (lines.size <= 1) return lines
 
@@ -317,7 +328,7 @@ class HomeViewModel @Inject constructor(
             }
         }
         val hour = now.get(Calendar.HOUR_OF_DAY)
-        val locationZone = "other"
+        val locationZone = getCurrentLocationZone()
 
         val topLines = repository.getTopLinesByContext(weekday, hour, locationZone, limit = 3)
 
@@ -349,7 +360,7 @@ class HomeViewModel @Inject constructor(
                 }
             }
             val hour = now.get(Calendar.HOUR_OF_DAY)
-            val locationZone = "other"
+            val locationZone = getCurrentLocationZone()
 
             repository.logBehavior(weekday, hour, locationZone, line.id, line.lineNumber)
         }
