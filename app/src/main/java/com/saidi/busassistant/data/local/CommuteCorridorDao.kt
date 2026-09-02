@@ -7,11 +7,14 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface CommuteCorridorDao {
 
-    @Query("SELECT * FROM commute_corridors ORDER BY id ASC")
+    @Query("SELECT * FROM commute_corridors ORDER BY display_order ASC, created_at ASC")
     fun getAllCorridors(): Flow<List<CommuteCorridorEntity>>
 
-    @Query("SELECT * FROM commute_corridors WHERE direction_type = :directionType LIMIT 1")
-    suspend fun getCorridorByDirection(directionType: String): CommuteCorridorEntity?
+    @Query("SELECT * FROM commute_corridors WHERE id = :id LIMIT 1")
+    suspend fun getCorridorById(id: Long): CommuteCorridorEntity?
+
+    @Query("SELECT * FROM commute_corridors WHERE origin_station = :origin AND destination_station = :destination LIMIT 1")
+    suspend fun findCorridorByStations(origin: String, destination: String): CommuteCorridorEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCorridor(corridor: CommuteCorridorEntity): Long

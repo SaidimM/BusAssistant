@@ -9,7 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.DirectionsWalk
-import androidx.compose.material.icons.filled.SwapVert
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -27,13 +27,13 @@ import com.saidi.busassistant.ui.viewmodel.CommuteCorridorUiState
 import com.saidi.busassistant.ui.viewmodel.CorridorCandidateLine
 
 /**
- * 智能通勤走廊看板卡片
- * 聚合同一通勤区段（如：康家沟 ➔ 四惠东）的所有候选公交线路，极速同屏对比
+ * 通用通勤走廊卡片
+ * 聚合同一走廊（如任意 [起点] ➔ [终点]）的所有候选公交线路，展示秒级到站对比
  */
 @Composable
 fun CommuteCorridorCard(
     corridorState: CommuteCorridorUiState,
-    onToggleDirection: () -> Unit,
+    onSwitchCorridor: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val corridor = corridorState.corridor ?: return
@@ -57,40 +57,40 @@ fun CommuteCorridorCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = if (corridorState.inferredDirection == "WORK")
-                                BluePrimary.copy(alpha = 0.12f)
-                            else
-                                MaterialTheme.colorScheme.tertiaryContainer
+                            color = BluePrimary.copy(alpha = 0.12f)
                         ) {
                             Text(
-                                text = if (corridorState.inferredDirection == "WORK") "🌅 上班通勤" else "🌙 回家通勤",
+                                text = corridor.corridorTag.ifBlank { "通勤走廊" },
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = if (corridorState.inferredDirection == "WORK")
-                                    BluePrimary
-                                else
-                                    MaterialTheme.colorScheme.onTertiaryContainer,
+                                color = BluePrimary,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }
 
                         if (corridorState.isAutoInferred) {
-                            Text(
-                                text = "智能推测",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.outline
-                            )
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant
+                            ) {
+                                Text(
+                                    text = "习惯推测",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
                         text = "${corridor.originStation} ➔ ${corridor.destinationStation}",
@@ -99,19 +99,21 @@ fun CommuteCorridorCard(
                     )
                 }
 
-                // 切换方向按钮
-                FilledTonalIconButton(
-                    onClick = onToggleDirection,
-                    shape = CircleShape,
-                    colors = IconButtonDefaults.filledTonalIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.SwapVert,
-                        contentDescription = "切换通勤方向",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                // 若存在多条走廊，提供切换按钮
+                if (corridorState.availableCorridors.size > 1) {
+                    FilledTonalIconButton(
+                        onClick = onSwitchCorridor,
+                        shape = CircleShape,
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SwapHoriz,
+                            contentDescription = "切换走廊",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
@@ -174,7 +176,6 @@ fun CommuteCorridorCard(
                             }
                         }
 
-                        // 倒计时突出显示
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
                                 text = if (earliestMins == 0) "已到站" else "${earliestMins}分钟",
@@ -189,7 +190,7 @@ fun CommuteCorridorCard(
                 Spacer(modifier = Modifier.height(10.dp))
             }
 
-            // ========== 步行及工位预计到达时间 ==========
+            // ========== 下车步行与预计到达时间 ==========
             corridorState.estimatedOfficeArrivalText?.let { arrivalText ->
                 Row(
                     modifier = Modifier
@@ -220,7 +221,7 @@ fun CommuteCorridorCard(
 
             // ========== 候选线路实时对比列表 ==========
             Text(
-                text = "候选路线 (${corridorState.candidateLines.size}条可选)",
+                text = "可选线路 (${corridorState.candidateLines.size}条)",
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -256,7 +257,6 @@ private fun CandidateLineRow(candidate: CorridorCandidateLine) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // 左侧：线路名称 + 站距
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -281,7 +281,6 @@ private fun CandidateLineRow(candidate: CorridorCandidateLine) {
                 )
             }
 
-            // 右侧：预计时间
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)

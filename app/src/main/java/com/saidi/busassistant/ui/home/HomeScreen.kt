@@ -129,7 +129,7 @@ fun HomeScreen(
                         item(key = "commute_corridor") {
                             CommuteCorridorCard(
                                 corridorState = corridorState,
-                                onToggleDirection = { viewModel.toggleCorridorDirection() }
+                                onSwitchCorridor = { viewModel.switchToNextCorridor() }
                             )
                         }
 

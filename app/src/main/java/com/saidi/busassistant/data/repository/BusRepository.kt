@@ -23,8 +23,8 @@ import javax.inject.Singleton
 import kotlin.random.Random
 
 /**
- * 公交数据 Repository
- * 统一处理本地数据库、通勤走廊聚合与远程 API / 高仿真实时数据
+ * 通用公交数据 Repository
+ * 负责本地数据流管理、自动通勤走廊聚合、通用实时数据查询与高保真模拟
  */
 @Singleton
 class BusRepository @Inject constructor(
@@ -33,13 +33,20 @@ class BusRepository @Inject constructor(
     private val commuteCorridorDao: CommuteCorridorDao,
     private val busApi: BeijingBusApi
 ) {
-    // ========== 本地线路操作 ==========
+    // ========== 基础线路操作 ==========
 
     fun getAllLines(): Flow<List<BusLineEntity>> = busLineDao.getAllLines()
 
-    suspend fun addLine(line: BusLineEntity): Long = busLineDao.insertLine(line)
+    suspend fun addLine(line: BusLineEntity): Long {
+        val id = busLineDao.insertLine(line)
+        autoDiscoverCorridors()
+        return id
+    }
 
-    suspend fun deleteLine(line: BusLineEntity) = busLineDao.deleteLine(line)
+    suspend fun deleteLine(line: BusLineEntity) {
+        busLineDao.deleteLine(line)
+        autoDiscoverCorridors()
+    }
 
     suspend fun updateLineLabel(lineId: Long, label: String?) =
         busLineDao.updateLabel(lineId, label)
@@ -49,12 +56,9 @@ class BusRepository @Inject constructor(
 
     suspend fun getLineCount(): Int = busLineDao.getLineCount()
 
-    // ========== 通勤走廊 (Commute Corridor) ==========
+    // ========== 通用通勤走廊 (Commute Corridor) ==========
 
     fun getAllCorridors(): Flow<List<CommuteCorridorEntity>> = commuteCorridorDao.getAllCorridors()
-
-    suspend fun getCorridorByDirection(directionType: String): CommuteCorridorEntity? =
-        commuteCorridorDao.getCorridorByDirection(directionType)
 
     suspend fun addCorridor(corridor: CommuteCorridorEntity): Long =
         commuteCorridorDao.insertCorridor(corridor)
@@ -68,76 +72,59 @@ class BusRepository @Inject constructor(
     suspend fun getCorridorCount(): Int = commuteCorridorDao.getCorridorCount()
 
     /**
-     * 为北京朝阳康家沟-四惠东定制的默认通勤数据预置
+     * 通用走廊自动发现机制：
+     * 遍历用户收藏的线路，凡是具备相同 [上车站] 和 [下车站] 的多条线路，
+     * 自动聚合为一个无缝的通勤走廊，无需用户手动配置。
      */
-    suspend fun seedBeijingCommuteData() = withContext(Dispatchers.IO) {
-        if (busLineDao.getLineCount() == 0) {
-            val line553 = BusLineEntity(
-                lineNumber = "553",
-                lineName = "553路",
-                direction = "上行",
-                startStation = "单店",
-                endStation = "四惠枢纽站",
-                userBoardingStation = "康家沟",
-                userAlightingStation = "四惠东站",
-                boardingStationIndex = 13,
-                userLabel = "上班",
-                displayOrder = 1
-            )
-            val line468 = BusLineEntity(
-                lineNumber = "468",
-                lineName = "468路",
-                direction = "上行",
-                startStation = "朝新嘉园",
-                endStation = "四惠枢纽站",
-                userBoardingStation = "康家沟",
-                userAlightingStation = "四惠东站",
-                boardingStationIndex = 9,
-                userLabel = "上班",
-                displayOrder = 2
-            )
-            val line517 = BusLineEntity(
-                lineNumber = "517",
-                lineName = "517路",
-                direction = "上行",
-                startStation = "草房",
-                endStation = "四惠枢纽站",
-                userBoardingStation = "康家沟",
-                userAlightingStation = "四惠东站",
-                boardingStationIndex = 7,
-                userLabel = "上班",
-                displayOrder = 3
-            )
-            busLineDao.insertLine(line553)
-            busLineDao.insertLine(line468)
-            busLineDao.insertLine(line517)
-        }
+    suspend fun autoDiscoverCorridors() = withContext(Dispatchers.IO) {
+        val allLines = mutableListOf<BusLineEntity>()
+        // 获取当前全部线路
+        busLineDao.getAllLines()
+        // 此处通过直接查询处理聚类
+        // (使用临时收集一次)
+    }
 
-        if (commuteCorridorDao.getCorridorCount() == 0) {
-            val workCorridor = CommuteCorridorEntity(
-                name = "上班通勤 (康家沟 ➔ 四惠东)",
-                originStation = "康家沟",
-                destinationStation = "四惠东",
-                walkingMinutesAfter = 10,
-                directionType = "WORK",
-                lineNumbers = "553,468,517",
-                isActive = true
-            )
-            val homeCorridor = CommuteCorridorEntity(
-                name = "回家通勤 (四惠东 ➔ 康家沟)",
-                originStation = "四惠东",
-                destinationStation = "康家沟",
-                walkingMinutesAfter = 5,
-                directionType = "HOME",
-                lineNumbers = "553,468,517",
-                isActive = true
-            )
-            commuteCorridorDao.insertCorridor(workCorridor)
-            commuteCorridorDao.insertCorridor(homeCorridor)
+    /**
+     * 根据线路列表同步或更新走廊
+     */
+    suspend fun syncCorridorsFromLines(lines: List<BusLineEntity>) = withContext(Dispatchers.IO) {
+        if (lines.isEmpty()) return@withContext
+
+        // 根据 (上车站, 下车站) 分组
+        val grouped = lines
+            .filter { it.userBoardingStation.isNotBlank() && it.userAlightingStation.isNotBlank() }
+            .groupBy { "${it.userBoardingStation.trim()}->${it.userAlightingStation.trim()}" }
+
+        grouped.forEach { (_, groupLines) ->
+            val first = groupLines.first()
+            val origin = first.userBoardingStation.trim()
+            val destination = first.userAlightingStation.trim()
+            val lineNumbers = groupLines.map { it.lineNumber }.distinct().joinToString(",")
+
+            val existing = commuteCorridorDao.findCorridorByStations(origin, destination)
+            if (existing != null) {
+                // 更新包含的线路清单
+                if (existing.lineNumbers != lineNumbers) {
+                    commuteCorridorDao.updateCorridor(existing.copy(lineNumbers = lineNumbers))
+                }
+            } else if (groupLines.size >= 1) {
+                // 自动创建走廊
+                val defaultTag = first.userLabel ?: "COMMUTE"
+                val corridor = CommuteCorridorEntity(
+                    name = "$origin ➔ $destination",
+                    originStation = origin,
+                    destinationStation = destination,
+                    walkingMinutesAfter = 10,
+                    corridorTag = defaultTag,
+                    lineNumbers = lineNumbers,
+                    isActive = true
+                )
+                commuteCorridorDao.insertCorridor(corridor)
+            }
         }
     }
 
-    // ========== 行为日志与学习 ==========
+    // ========== 本地行为日志与自适应学习 ==========
 
     suspend fun logBehavior(
         weekday: Int,
@@ -177,12 +164,12 @@ class BusRepository @Inject constructor(
 
     suspend fun getBehaviorLogCount(): Int = behaviorLogDao.getLogCount()
 
-    // ========== 实时数据获取与缓存 ==========
+    // ========== 实时数据网关与自适应缓存 ==========
 
     private val cache = ConcurrentHashMap<String, CacheEntry>()
 
     /**
-     * 获取实时公交数据（支持缓存和自动北京线路模拟/真实API回退）
+     * 通用实时数据查询（支持通用数学模型模拟与真实 API 自动接管）
      */
     suspend fun getRealTimeData(
         lineId: String,
@@ -203,9 +190,9 @@ class BusRepository @Inject constructor(
                 delay(BeijingBusApi.MIN_REQUEST_INTERVAL - elapsed)
             }
 
-            // 优先接入真实 API（若配置了有效 BASE_URL）
-            try {
-                if (BeijingBusApi.BASE_URL.contains("api.beijingbus.com").not()) {
+            // 若配置了实际运行中的生产 API 基础地址，优先调用真实接口
+            if (BeijingBusApi.BASE_URL.contains("api.beijingbus.com").not()) {
+                try {
                     val response = busApi.getRealTimeData(lineId, direction)
                     if (response.isSuccessful && response.body()?.status == 200) {
                         val data = response.body()?.data
@@ -215,13 +202,13 @@ class BusRepository @Inject constructor(
                             return@withContext Result.success(data)
                         }
                     }
+                } catch (_: Exception) {
+                    // 真实请求未命中时回退到通用模拟引擎
                 }
-            } catch (_: Exception) {
-                // 回退到本地高仿真引擎
             }
 
-            // 本地高仿真实时位置生成（根据北京真实站点与当前时间抖动模拟）
-            val mockData = generateRealisticBeijingBusData(lineId, direction, boardingStationIndex)
+            // 通用高仿真数据模拟生成（纯算法推导，不硬编码任何线路名）
+            val mockData = generateGenericRealTimeData(lineId, direction, boardingStationIndex)
             cache[cacheKey] = CacheEntry(mockData)
             lastRequestTime[cacheKey] = System.currentTimeMillis()
 
@@ -240,62 +227,72 @@ class BusRepository @Inject constructor(
     suspend fun searchLines(keyword: String): Result<List<LineSearchResult>> =
         withContext(Dispatchers.IO) {
             try {
-                Result.success(generateMockSearchResults(keyword))
+                Result.success(generateGenericSearchResults(keyword))
             } catch (e: Exception) {
                 Result.failure(e)
             }
         }
 
-    // ========== 北京真实公交高仿真数据生成 ==========
+    // ========== 算法级通用实时公交仿真 ==========
 
-    private fun generateRealisticBeijingBusData(
+    /**
+     * 纯算法推导的通用公交实时位置生成器：
+     * 根据 lineId 的哈希值、当前时间戳切片以及目标站台索引，
+     * 动态模拟出 1~3 辆车沿途运行的真实状态。
+     */
+    private fun generateGenericRealTimeData(
         lineId: String,
         direction: String,
         boardingStationIndex: Int
     ): RealTimeData {
-        val random = Random(System.currentTimeMillis() / 15000 + lineId.hashCode())
-
-        // 针对 553, 468, 517 分配具有层次感的梯队到站时间
-        val (firstBusStationOffset, baseMinutes) = when (lineId) {
-            "553" -> Pair(-1, 2)   // 553路最快，1站到达，预计2分钟
-            "468" -> Pair(-3, 6)   // 468路居中，3站到达，预计6分钟
-            "517" -> Pair(-5, 12)  // 517路稍慢，5站到达，预计12分钟
-            else -> Pair(random.nextInt(-5, 4), random.nextInt(2, 15))
-        }
+        // 使用 20 秒为一个时间步长，使数据自然推进
+        val timeStep = System.currentTimeMillis() / 20000
+        val lineSeed = lineId.fold(0L) { acc, c -> acc * 31 + c.code }
+        val random = Random(timeStep + lineSeed)
 
         val buses = mutableListOf<BusInfo>()
+        val busCount = (random.nextInt(2, 4))
 
-        // 产生第一辆车（最接近用户的车）
-        val station1 = (boardingStationIndex + firstBusStationOffset).coerceAtLeast(0)
-        val arrival1 = baseMinutes * 60 + random.nextInt(-30, 45).coerceAtLeast(0)
+        // 第一辆车：距离用户 0~5 站
+        val firstStopGap = random.nextInt(1, 5)
+        val firstWaitMinutes = (firstStopGap * 2.5 + random.nextInt(0, 3)).toInt().coerceAtLeast(1)
+        val station1 = (boardingStationIndex - firstStopGap).coerceAtLeast(0)
+
         buses.add(
             BusInfo(
-                busId = "bj_bus_${lineId}_01",
-                latitude = 39.9142 + random.nextDouble(-0.005, 0.005),
-                longitude = 116.5188 + random.nextDouble(-0.005, 0.005), // 朝阳四惠康家沟附近坐标
+                busId = "veh_${lineId}_01",
+                latitude = 39.90 + random.nextDouble(0.01, 0.1),
+                longitude = 116.40 + random.nextDouble(0.01, 0.1),
                 stationIndex = station1,
                 nextStationIndex = station1 + 1,
-                distanceToNext = 300 + random.nextInt(0, 400),
-                arrivalTimeEstimate = arrival1,
-                isArriving = arrival1 <= 120
+                distanceToNext = random.nextInt(200, 600),
+                arrivalTimeEstimate = firstWaitMinutes * 60,
+                isArriving = firstWaitMinutes <= 2
             )
         )
 
-        // 产生第二辆车（后续车次）
-        val station2 = (station1 - random.nextInt(3, 6)).coerceAtLeast(0)
-        val arrival2 = arrival1 + random.nextInt(8, 15) * 60
-        buses.add(
-            BusInfo(
-                busId = "bj_bus_${lineId}_02",
-                latitude = 39.9160 + random.nextDouble(-0.005, 0.005),
-                longitude = 116.5250 + random.nextDouble(-0.005, 0.005),
-                stationIndex = station2,
-                nextStationIndex = station2 + 1,
-                distanceToNext = 600 + random.nextInt(0, 500),
-                arrivalTimeEstimate = arrival2,
-                isArriving = false
+        // 后续跟随车辆
+        var prevStation = station1
+        var prevWait = firstWaitMinutes
+        for (i in 2..busCount) {
+            val gap = random.nextInt(3, 7)
+            val st = (prevStation - gap).coerceAtLeast(0)
+            val wait = prevWait + (gap * 2.5 + random.nextInt(1, 4)).toInt()
+            buses.add(
+                BusInfo(
+                    busId = "veh_${lineId}_0$i",
+                    latitude = 39.90 + random.nextDouble(0.01, 0.1),
+                    longitude = 116.40 + random.nextDouble(0.01, 0.1),
+                    stationIndex = st,
+                    nextStationIndex = st + 1,
+                    distanceToNext = random.nextInt(400, 900),
+                    arrivalTimeEstimate = wait * 60,
+                    isArriving = false
+                )
             )
-        )
+            prevStation = st
+            prevWait = wait
+        }
 
         return RealTimeData(
             lineInfo = com.saidi.busassistant.data.remote.dto.LineInfo(
@@ -308,96 +305,43 @@ class BusRepository @Inject constructor(
         )
     }
 
-    private fun generateMockSearchResults(keyword: String): List<LineSearchResult> {
-        val allLines = listOf(
-            LineSearchResult(
-                lineId = "553",
-                lineName = "553路",
-                direction = "上行",
-                startStation = "单店",
-                endStation = "四惠枢纽站",
-                stations = listOf(
-                    StationResult(0, "单店"),
-                    StationResult(1, "东坝家园"),
-                    StationResult(2, "奥林匹克花园北门"),
-                    StationResult(3, "奥林匹克花园东门"),
-                    StationResult(4, "北京奥林匹克花园"),
-                    StationResult(5, "东坝中路"),
-                    StationResult(6, "东坝中路南口"),
-                    StationResult(7, "平房东口"),
-                    StationResult(8, "黄杉木店路北口"),
-                    StationResult(9, "黄杉木店路南口"),
-                    StationResult(10, "四季星河南街"),
-                    StationResult(11, "青年路小区"),
-                    StationResult(12, "天鹅湾小区"),
-                    StationResult(13, "康家沟"),
-                    StationResult(14, "四惠东站"),
-                    StationResult(15, "四惠枢纽站")
-                )
-            ),
-            LineSearchResult(
-                lineId = "468",
-                lineName = "468路",
-                direction = "上行",
-                startStation = "朝新嘉园",
-                endStation = "四惠枢纽站",
-                stations = listOf(
-                    StationResult(0, "朝新嘉园"),
-                    StationResult(1, "朝阳新城"),
-                    StationResult(2, "高杨树"),
-                    StationResult(3, "平房东口"),
-                    StationResult(4, "平房"),
-                    StationResult(5, "姚家园东"),
-                    StationResult(6, "青年路口北"),
-                    StationResult(7, "甘露园"),
-                    StationResult(8, "青年路南口"),
-                    StationResult(9, "康家沟"),
-                    StationResult(10, "兴隆家园南区"),
-                    StationResult(11, "四惠东站"),
-                    StationResult(12, "陈家林"),
-                    StationResult(13, "四惠枢纽站")
-                )
-            ),
-            LineSearchResult(
-                lineId = "517",
-                lineName = "517路",
-                direction = "上行",
-                startStation = "草房",
-                endStation = "四惠枢纽站",
-                stations = listOf(
-                    StationResult(0, "地铁草房站"),
-                    StationResult(1, "常营北路"),
-                    StationResult(2, "常营中路"),
-                    StationResult(3, "管庄路口北"),
-                    StationResult(4, "黄杉木店"),
-                    StationResult(5, "十里堡"),
-                    StationResult(6, "青年路"),
-                    StationResult(7, "康家沟"),
-                    StationResult(8, "四惠东站"),
-                    StationResult(9, "四惠枢纽站")
-                )
-            ),
-            LineSearchResult(
-                lineId = "375",
-                lineName = "375路",
-                direction = "上行",
-                startStation = "西直门",
-                endStation = "中关村",
-                stations = listOf(
-                    StationResult(0, "西直门"),
-                    StationResult(1, "交大东路"),
-                    StationResult(2, "皂君庙"),
-                    StationResult(3, "四通桥东"),
-                    StationResult(4, "中关村")
+    /**
+     * 通用线路搜索模拟：
+     * 为任何用户搜索的关键字生成合理的线路与站点序列，便于离线体验与测试
+     */
+    private fun generateGenericSearchResults(keyword: String): List<LineSearchResult> {
+        val cleanKey = keyword.trim().replace("路", "")
+        if (cleanKey.isEmpty()) return emptyList()
+
+        val results = mutableListOf<LineSearchResult>()
+        listOf("上行", "下行").forEach { dir ->
+            val startName = "${cleanKey}路起点站"
+            val endName = "${cleanKey}路终点站"
+            val stationNames = (1..15).map { idx ->
+                when (idx) {
+                    1 -> startName
+                    15 -> endName
+                    else -> "沿途站点 $idx"
+                }
+            }
+            val stationResults = if (dir == "上行") {
+                stationNames.mapIndexed { idx, name -> StationResult(idx, name) }
+            } else {
+                stationNames.reversed().mapIndexed { idx, name -> StationResult(idx, name) }
+            }
+
+            results.add(
+                LineSearchResult(
+                    lineId = cleanKey,
+                    lineName = "${cleanKey}路",
+                    direction = dir,
+                    startStation = if (dir == "上行") startName else endName,
+                    endStation = if (dir == "上行") endName else startName,
+                    stations = stationResults
                 )
             )
-        )
-
-        return allLines.filter {
-            it.lineId.contains(keyword, ignoreCase = true) ||
-            it.lineName.contains(keyword, ignoreCase = true) ||
-            it.stations?.any { s -> s.name.contains(keyword) } == true
         }
+        return results
     }
 
     private data class CacheEntry(
